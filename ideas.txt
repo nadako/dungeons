@@ -1,0 +1,1 @@
+In message log, mark last turn's messages with a marker, unmark on next turn.
