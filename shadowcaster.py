@@ -9,12 +9,22 @@ class ShadowCaster(object):
     is_blocking_cb(x, y) - function that returns whether
     the cell is blocking view.
 
-    light_cb(x, y) - function that is called when cell
-    is lit.
+    light_cb(x, y, intensity) - function that is called when cell
+    is lit. intensity is a float value within range 0..1, where
+    1 means fully lit cell and 0 is no light. Keep in mind though
+    that this callback won't be called for any cells not in sight.
 
     Then, just call the calculate_light(x, y, radius).
     It will invoke callback functions you passed in
     constructor.
+
+    You can also override the calculate_intensity method to
+    change the light intensity calculation formula. The default
+    method is very fast, but not so good-looking linear attenuation.
+    See http://doryen.eptalys.net/articles/lights-in-full-color-roguelikes/
+    for more examples. Hint: if you don't want intensity to be
+    calculated at all, replace this method with "return 1" to get
+    always full-lit cells.
     """
 
     # coordinate multipliers for different octants
@@ -65,9 +75,13 @@ class ShadowCaster(object):
                 map_x = cx + dx * xx + dy * xy
                 map_y = cy + dx * yx + dy * yy
 
+                # calculate squared distantion from light position
+                dist_squared = dx * dx + dy * dy
+
                 # our light beam is touching this square, so light it
-                if dx * dx + dy * dy < radius_squared:
-                    self.light_cb(map_x, map_y)
+                if dist_squared < radius_squared:
+                    intensity = self.calculate_intensity(dist_squared, radius_squared)
+                    self.light_cb(map_x, map_y, intensity)
 
                 # if previous cell was blocking, we're scanning a section of blocking cells
                 if blocked:
@@ -93,3 +107,6 @@ class ShadowCaster(object):
             # because we created recursive scanners for further work
             if blocked:
                 break
+
+    def calculate_intensity(self, dist_squared, radius_squared):
+        return 1.0 - float(dist_squared) / float(radius_squared)

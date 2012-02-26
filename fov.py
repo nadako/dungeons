@@ -1,59 +1,55 @@
 import libtcodpy as tcod
 
 from shadowcaster import ShadowCaster
+from generator import DungeonGenerator
 
-dungeon = [
-    "###########################################################",
-    "#...........#.............................................#",
-    "#...........#........#....................................#",
-    "#.....................#...................................#",
-    "#....####..............#..................................#",
-    "#.......#.......................#####################.....#",
-    "#.......#...........................................#.....#",
-    "#.......#...........##..............................#.....#",
-    "#####........#......##..........##################..#.....#",
-    "#...#...........................#................#..#.....#",
-    "#...#............#..............#................#..#.....#",
-    "#...............................#..###############..#.....#",
-    "#...............................#...................#.....#",
-    "#...............................#...................#.....#",
-    "#...............................#####################.....#",
-    "#.........................................................#",
-    "#.........................................................#",
-    "###########################################################"
-]
-width = len(dungeon[0])
-height = len(dungeon)
-light_flag = 0
-light = [[light_flag for x in xrange(width)] for y in xrange(height)]
+dungeon = DungeonGenerator(size=(80, 80), max_rooms=100, min_room_size=(5, 5), max_room_size=(10, 10))
+dungeon.generate()
+
 fov_radius = 10
-x, y = 36, 13
-dark, lit = tcod.dark_blue, tcod.white
+dark, lit = tcod.darkest_gray, tcod.yellow
+x, y = dungeon.size.x / 2, dungeon.size.y / 2
 
-def is_blocked(x, y):
-    return x < 0 or y < 0 or x >= width or y >= height or dungeon[y][x] == "#"
+def is_blocked_cb(x, y):
+    return x < 0 or y < 0 or x >= dungeon.size.x or y >= dungeon.size.y or dungeon.grid[y][x] == "#"
 
-def do_light(x, y):
-    light[y][x] = light_flag
+def light_cb(x, y, intensity):
+    global light
+    light[y][x] = intensity
 
-caster = ShadowCaster(is_blocked, do_light)
+caster = ShadowCaster(is_blocked_cb, light_cb)
 
-tcod.console_init_root(80, 80, 'FOV', renderer=tcod.RENDERER_SDL)
+def recompute_light():
+    global x, y, light
+    light = [[0 for i in xrange(dungeon.size.x)] for j in xrange(dungeon.size.y)]
+    caster.calculate_light(x, y, fov_radius)
+
+def lerp(a, b, t):
+    return a + (b - a) * t
+
+def get_light_color(intensity):
+    return tcod.Color(
+        int(lerp(dark.r, lit.r, intensity)),
+        int(lerp(dark.g, lit.g, intensity)),
+        int(lerp(dark.b, lit.b, intensity)))
+
+
+tcod.console_init_root(dungeon.size.x, dungeon.size.y, 'FOV')
 
 while not tcod.console_is_window_closed():
-    light_flag += 1
-    caster.calculate_light(x, y, fov_radius)
+    global light
+    recompute_light()
 
     tcod.console_clear(0)
 
-    for mx in xrange(width):
-        for my in xrange(height):
+    for mx in xrange(dungeon.size.x):
+        for my in xrange(dungeon.size.y):
             if mx == x and my == y:
                 ch = '@'
                 col = lit
             else:
-                ch = dungeon[my][mx]
-                col = (light[my][mx] == light_flag) and lit or dark
+                ch = dungeon.grid[my][mx]
+                col = get_light_color(light[my][mx])
 
             tcod.console_set_default_foreground(0, col)
             tcod.console_put_char(0, mx, my, ch)
