@@ -108,23 +108,32 @@ def on_draw():
     batch.draw()
 
 
+def process_keys():
+    while True:
+        sym, mod = yield
+
+        if sym == key.NUM_8:
+            move_hero(0, -1)
+        elif sym == key.NUM_2:
+            move_hero(0, 1)
+        elif sym == key.NUM_4:
+            move_hero(-1, 0)
+        elif sym == key.NUM_6:
+            move_hero(1, 0)
+        elif sym == key.NUM_7:
+            move_hero(-1, -1)
+        elif sym == key.NUM_9:
+            move_hero(1, -1)
+        elif sym == key.NUM_1:
+            move_hero(-1, 1)
+        elif sym == key.NUM_3:
+            move_hero(1, 1)
+
+key_processor = process_keys()
+key_processor.send(None) # start the coroutine
+
 @window.event
 def on_key_press(sym, mod):
-    if sym == key.NUM_8:
-        move_hero(0, -1)
-    elif sym == key.NUM_2:
-        move_hero(0, 1)
-    elif sym == key.NUM_4:
-        move_hero(-1, 0)
-    elif sym == key.NUM_6:
-        move_hero(1, 0)
-    elif sym == key.NUM_7:
-        move_hero(-1, -1)
-    elif sym == key.NUM_9:
-        move_hero(1, -1)
-    elif sym == key.NUM_1:
-        move_hero(-1, 1)
-    elif sym == key.NUM_3:
-        move_hero(1, 1)
+    key_processor.send((sym, mod))
 
 pyglet.app.run()
