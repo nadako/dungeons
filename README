@@ -1,1 +1,7 @@
-This file was created by PyCharm 2.0.2 for binding GitHub repository
+Currently, this is a repository for my random roguelike related study.
+
+I'll try to understand and implement related algorithms, such as
+dungeon generation and FOV techniques and provide a well-commented
+minimal implementations without any dependencies.
+
+Hopefully, once this will become a nice roguelike game. :-)
