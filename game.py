@@ -22,11 +22,14 @@ creatures_img = pyglet.image.load('creatures.png')
 creatures_seq = pyglet.image.ImageGrid(creatures_img, creatures_img.height / TILE_SIZE, creatures_img.width / TILE_SIZE)
 creatures_tex = creatures_seq.get_texture_sequence()
 
-dungeon = DungeonGenerator((30, 25), 100, (3, 3), (10, 10))
+dungeon = DungeonGenerator((100, 100), 100, (3, 3), (20, 20))
 dungeon.generate()
 
-window = pyglet.window.Window(dungeon.size.x * TILE_SIZE * ZOOM, dungeon.size.y * TILE_SIZE * ZOOM, 'Dungeon')
+window = pyglet.window.Window(1024, 768, 'Dungeon')
 window.set_location(40, 60)
+
+center_anchor_x = window.width / 2 / ZOOM
+center_anchor_y = window.height / 2 / ZOOM
 
 batch = pyglet.graphics.Batch()
 
@@ -85,7 +88,7 @@ class HeroGroup(pyglet.graphics.Group):
 
     def set_state(self):
         glPushMatrix()
-        glTranslatef(hero_x * 8, hero_y * 8, 0)
+        glTranslatef(center_anchor_x, center_anchor_y, 0)
 
     def unset_state(self):
         glPopMatrix()
@@ -134,7 +137,19 @@ map_shader = Shader(open('texture.vert', 'r').read().split('\n'), open('texture.
 draw_order = get_draw_order()
 vertices, tex_coords = prepare_tile_vertices(draw_order)
 
-map_vlist = batch.add(len(draw_order) * 4, GL_QUADS, ShaderGroup(map_shader, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0))),
+class MapGroup(pyglet.graphics.Group):
+
+    def __init__(self, parent=None):
+        super(MapGroup, self).__init__(parent)
+
+    def set_state(self):
+        glPushMatrix()
+        glTranslatef(center_anchor_x - hero_x * TILE_SIZE, center_anchor_y - hero_y * TILE_SIZE, 0)
+
+    def unset_state(self):
+        glPopMatrix()
+
+map_vlist = batch.add(len(draw_order) * 4, GL_QUADS, MapGroup(ShaderGroup(map_shader, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0)))),
     ('v2f/static', vertices),
     ('t3f/static', tex_coords),
 )
@@ -145,12 +160,10 @@ glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 @window.event
 def on_draw():
     window.clear()
-
     glPushMatrix()
     glScalef(ZOOM, ZOOM, 1)
     batch.draw()
     glPopMatrix()
-
 
 def process_keys():
     while True:
