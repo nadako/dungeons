@@ -4,8 +4,9 @@ from pyglet.gl import *
 from pyglet.window import key
 
 from generator import DungeonGenerator, TILE_FLOOR, TILE_WALL, TILE_EMPTY
+from shader import Shader
 
-dungeon = DungeonGenerator((40, 25), 100, (3, 3), (10, 10))
+dungeon = DungeonGenerator((30, 25), 100, (3, 3), (10, 10))
 dungeon.generate()
 
 zoom = 4
@@ -14,16 +15,15 @@ window = pyglet.window.Window(dungeon.size.x * zoom * 8, dungeon.size.y * zoom *
 window.set_location(40, 60)
 
 dungeon_img = pyglet.image.load('dungeon.png')
-dungeon_img_grid = pyglet.image.ImageGrid(dungeon_img, dungeon_img.height / 8, dungeon_img.width / 8)
+dungeon_seq = pyglet.image.ImageGrid(dungeon_img, dungeon_img.height / 8, dungeon_img.width / 8)
+dungeon_tex = dungeon_seq.get_texture_sequence()
 
 creatures_img = pyglet.image.load('creatures.png')
-creatures_img_grid = pyglet.image.ImageGrid(creatures_img, creatures_img.height / 8, creatures_img.width / 8)
+creatures_seq = pyglet.image.ImageGrid(creatures_img, creatures_img.height / 8, creatures_img.width / 8)
+creatures_tex = creatures_seq.get_texture_sequence()
 
 def get_screen_coords(x, y):
-    return x * 8 * zoom, window.height - (y + 1) * 8 * zoom
-
-def get_dungeon_img_tile(row, col):
-    return dungeon_img_grid[row * dungeon_img_grid.columns + col]
+    return x * 8, window.height - (y + 1) * 8
 
 batch = pyglet.graphics.Batch()
 
@@ -31,16 +31,11 @@ starting_room = random.choice(dungeon.rooms)
 hero_x = starting_room.position.x + starting_room.size.x / 2
 hero_y = starting_room.position.y + starting_room.size.y / 2
 
-hero = pyglet.sprite.Sprite(creatures_img_grid[(creatures_img_grid.rows - 1) * creatures_img_grid.columns + 2], batch=batch)
-hero.scale = zoom
-hero.set_position(*get_screen_coords(hero_x, hero_y))
-
 def move_hero(dx, dy):
     global hero, hero_x, hero_y
     if dungeon.grid[hero_y + dy][hero_x + dx] == TILE_FLOOR:
         hero_x += dx
         hero_y += dy
-        hero.set_position(*get_screen_coords(hero_x, hero_y))
 
 def get_transition_tile(x, y):
     n = 1
@@ -201,39 +196,91 @@ def get_transition_tile(x, y):
     if v not in gridcolmap:
         v = v & 15
 
-    return get_dungeon_img_tile(dungeon_img_grid.rows - 7, gridcolmap[v])
+    return dungeon_tex[dungeon_tex.rows - 7, gridcolmap[v]]
 
-map_tiles = []
+class TextureGroup(pyglet.graphics.TextureGroup):
 
-floorgroup = pyglet.graphics.OrderedGroup(0)
-wallgroup = pyglet.graphics.OrderedGroup(1)
+    def set_state(self):
+        super(TextureGroup, self).set_state()
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 
-# prepare map tiles
-for x in xrange(dungeon.size.x):
-    for y in xrange(dungeon.size.y):
-        sx, sy = get_screen_coords(x, y)
-        if dungeon.grid[y][x] in (TILE_FLOOR, TILE_WALL):
-            img = get_dungeon_img_tile(dungeon_img_grid.rows - 1, 4)
-            sprite = pyglet.sprite.Sprite(img, sx, sy, batch=batch, group=floorgroup)
-            sprite.scale = zoom
-            map_tiles.append(sprite)
+class HeroGroup(pyglet.graphics.Group):
 
-            if dungeon.grid[y][x] == TILE_WALL:
-                img = get_transition_tile(x, y)
-                sprite = pyglet.sprite.Sprite(img, sx, sy, batch=batch, group=wallgroup)
-                sprite.scale = zoom
-                map_tiles.append(sprite)
-        elif dungeon.grid[y][x] == TILE_EMPTY:
-            img = get_dungeon_img_tile(dungeon_img_grid.rows - 7, 0)
-            sprite = pyglet.sprite.Sprite(img, sx, sy, batch=batch, group=wallgroup)
-            sprite.scale = zoom
-            map_tiles.append(sprite)
+    def __init__(self, parent=None):
+        super(HeroGroup, self).__init__(parent)
 
+    def set_state(self):
+        glPushMatrix()
+        x, y = get_screen_coords(hero_x, hero_y)
+        glTranslatef(x, y, 0)
+
+    def unset_state(self):
+        glPopMatrix()
+
+hero_vlist = batch.add(4, GL_QUADS, HeroGroup(TextureGroup(creatures_tex, pyglet.graphics.OrderedGroup(1))),
+    ('v2i/statc', (0, 0, 8, 0, 8, 8, 0, 8)),
+    ('t3f/statc', creatures_tex[creatures_tex.rows - 1, 0].tex_coords)
+)
+
+num_tiles = 0
+vertices = []
+tex_coords = []
+floor_tex = dungeon_tex[dungeon_tex.rows - 1, 4]
+empty_tex = dungeon_tex[dungeon_tex.rows - 7, 0]
+
+for tile_y, row in enumerate(dungeon.grid):
+    for tile_x, tile in enumerate(row):
+        x1, y1 = get_screen_coords(tile_x, tile_y)
+        x2, y2 = x1 + 8, y1 + 8
+
+        num_tiles += 1
+        vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+        if tile == TILE_EMPTY:
+            tex_coords.extend(empty_tex.tex_coords)
+        else:
+            tex_coords.extend(floor_tex.tex_coords)
+
+        if tile == TILE_WALL:
+            num_tiles += 1
+            vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+            tex = get_transition_tile(tile_x, tile_y)
+            tex_coords.extend(tex.tex_coords)
+
+map_vlist = batch.add(num_tiles * 4, GL_QUADS, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0)),
+    ('v2f/static', vertices),
+    ('t3f/static', tex_coords)
+)
+
+shader = Shader(
+    """
+    void main()
+    {
+        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+        gl_TexCoord[0] = gl_MultiTexCoord0;
+    }
+    """.split('\n'),
+    """
+    uniform sampler2D texture;
+
+    void main()
+    {
+        gl_FragColor = texture2D(texture, gl_TexCoord[0].st);
+    }
+    """.split('\n'))
+
+glEnable(GL_BLEND)
+glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 @window.event
 def on_draw():
     window.clear()
-    batch.draw()
+
+    glPushMatrix()
+    glScalef(zoom, zoom, 1)
+    glTranslatef(0, -dungeon.size.y * 8 * (zoom - 1), 0)
+    with shader:
+        batch.draw()
+    glPopMatrix()
 
 
 def process_keys():

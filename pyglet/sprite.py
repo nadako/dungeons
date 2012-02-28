@@ -138,9 +138,6 @@ class SpriteGroup(graphics.Group):
         glEnable(self.texture.target)
         glBindTexture(self.texture.target, self.texture.id)
 
-        # FIXME: quick hack by dan korostelev to avoid smoothing
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-
         glPushAttrib(GL_COLOR_BUFFER_BIT)
         glEnable(GL_BLEND)
         glBlendFunc(self.blend_src, self.blend_dest)
