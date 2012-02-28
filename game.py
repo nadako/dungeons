@@ -1,4 +1,5 @@
 import random
+import time
 import pyglet
 from pyglet.gl import *
 from pyglet.window import key
@@ -217,6 +218,20 @@ class HeroGroup(pyglet.graphics.Group):
     def unset_state(self):
         glPopMatrix()
 
+class ShaderGroup(pyglet.graphics.Group):
+
+    def __init__(self, shader, parent=None):
+        super(ShaderGroup, self).__init__(parent)
+        self.shader = shader
+
+    def set_state(self):
+        self.shader.bind()
+        frame = (int(time.time() * 1000) & 999) // 500
+        self.shader.uniformi('frame', frame)
+
+    def unset_state(self):
+        self.shader.unbind()
+
 hero_vlist = batch.add(4, GL_QUADS, HeroGroup(TextureGroup(creatures_tex, pyglet.graphics.OrderedGroup(1))),
     ('v2i/statc', (0, 0, 8, 0, 8, 8, 0, 8)),
     ('t3f/statc', creatures_tex[creatures_tex.rows - 1, 0].tex_coords)
@@ -225,7 +240,11 @@ hero_vlist = batch.add(4, GL_QUADS, HeroGroup(TextureGroup(creatures_tex, pyglet
 num_tiles = 0
 vertices = []
 tex_coords = []
-floor_tex = dungeon_tex[dungeon_tex.rows - 1, 4]
+animate_list = []
+animate_yes = (1, 1, 1, 1)
+animate_no = (0, 0, 0, 0)
+floor_tex = dungeon_tex[38, 4]
+water_tex = dungeon_tex[dungeon_tex.rows - 2, 0]
 empty_tex = dungeon_tex[dungeon_tex.rows - 7, 0]
 
 for tile_y, row in enumerate(dungeon.grid):
@@ -237,36 +256,53 @@ for tile_y, row in enumerate(dungeon.grid):
         vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
         if tile == TILE_EMPTY:
             tex_coords.extend(empty_tex.tex_coords)
+            animate_list.extend(animate_no)
         else:
             tex_coords.extend(floor_tex.tex_coords)
+            animate_list.extend(animate_yes)
 
         if tile == TILE_WALL:
             num_tiles += 1
             vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
             tex = get_transition_tile(tile_x, tile_y)
             tex_coords.extend(tex.tex_coords)
+            animate_list.extend(animate_no)
 
-map_vlist = batch.add(num_tiles * 4, GL_QUADS, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0)),
+anim_offset = dungeon_tex[0, 0].tex_coords[3]
+
+map_shader = Shader(
+("""
+in bool anim;
+uniform int frame;
+const float xOffset = %s;
+
+void main()
+{
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+
+    vec4 texCoord = gl_MultiTexCoord0;
+    if (anim)
+    {
+        texCoord.s += frame * xOffset;
+    }
+    gl_TexCoord[0] = texCoord;
+}
+""" % anim_offset).split('\n'),
+"""
+uniform sampler2D texture;
+
+void main()
+{
+    gl_FragColor = texture2D(texture, gl_TexCoord[0].st);
+}
+""".split('\n'))
+
+
+map_vlist = batch.add(num_tiles * 4, GL_QUADS, ShaderGroup(map_shader, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0))),
     ('v2f/static', vertices),
-    ('t3f/static', tex_coords)
+    ('t3f/static', tex_coords),
+    ('1g1b', animate_list),
 )
-
-shader = Shader(
-    """
-    void main()
-    {
-        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-        gl_TexCoord[0] = gl_MultiTexCoord0;
-    }
-    """.split('\n'),
-    """
-    uniform sampler2D texture;
-
-    void main()
-    {
-        gl_FragColor = texture2D(texture, gl_TexCoord[0].st);
-    }
-    """.split('\n'))
 
 glEnable(GL_BLEND)
 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -278,8 +314,7 @@ def on_draw():
     glPushMatrix()
     glScalef(zoom, zoom, 1)
     glTranslatef(0, -dungeon.size.y * 8 * (zoom - 1), 0)
-    with shader:
-        batch.draw()
+    batch.draw()
     glPopMatrix()
 
 
@@ -311,4 +346,8 @@ key_processor.send(None) # start the coroutine
 def on_key_press(sym, mod):
     key_processor.send((sym, mod))
 
+def update(dt):
+    pass
+
+pyglet.clock.schedule(update)
 pyglet.app.run()
