@@ -130,23 +130,7 @@ def prepare_tile_vertices(draw_order):
 
     return vertices, tex_coords
 
-map_shader = Shader(
-("""
-void main()
-{
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    gl_TexCoord[0] = gl_MultiTexCoord0;
-}
-""").split('\n'),
-"""
-uniform sampler2D texture;
-void main()
-{
-    gl_FragColor = texture2D(texture, gl_TexCoord[0].st);
-}
-""".split('\n'))
-
-
+map_shader = Shader(open('texture.vert', 'r').read().split('\n'), open('texture.frag', 'r').read().split('\n'))
 draw_order = get_draw_order()
 vertices, tex_coords = prepare_tile_vertices(draw_order)
 
