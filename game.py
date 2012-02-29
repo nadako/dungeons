@@ -7,12 +7,14 @@ from generator import DungeonGenerator, TILE_FLOOR, TILE_WALL, TILE_EMPTY
 from eight2empire import TRANSITION_TILES
 from graphics import TextureGroup, ShaderGroup
 from shader import Shader
+from shadowcaster import ShadowCaster
 
 TILE_SIZE = 8
 ZOOM = 4
 WALL_TEX_ROW = 33
 FLOOR_TEX = 39, 4
 HERO_TEX = 39, 2
+LIGHT_RADIUS = 10
 
 dungeon_img = pyglet.image.load('dungeon.png')
 dungeon_seq = pyglet.image.ImageGrid(dungeon_img, dungeon_img.height / TILE_SIZE, dungeon_img.width / TILE_SIZE)
@@ -42,6 +44,7 @@ def move_hero(dx, dy):
     if dungeon.grid[hero_y + dy][hero_x + dx] == TILE_FLOOR:
         hero_x += dx
         hero_y += dy
+        update_lighting()
 
 def is_wall(x, y):
     if x < 0 or x >= dungeon.size.x or y < 0 or y >= dungeon.size.y:
@@ -133,7 +136,33 @@ def prepare_tile_vertices(draw_order):
 
     return vertices, tex_coords
 
-map_shader = Shader(open('texture.vert', 'r').read().split('\n'), open('texture.frag', 'r').read().split('\n'))
+explored = {}
+
+def prepare_lighting():
+    global hero_x, hero_y, draw_order, explored
+
+    lightmap = {(hero_x, hero_y): 1}
+    def set_light(x, y, intensity):
+        lightmap[x, y] = intensity
+
+    caster = ShadowCaster(is_wall, set_light)
+    caster.calculate_light(hero_x, hero_y, LIGHT_RADIUS)
+
+    buffer = []
+    for x, y, tile in draw_order:
+        l = lightmap.get((x, y), 0)
+        if l > 0:
+            explored[x, y] = True
+            l = 0.3 + 0.7 * l
+        elif explored.get((x, y)):
+            l = 0.3
+        l = int(l * 255)
+        buffer.extend((l, l, l) * 4)
+
+    return buffer
+
+
+map_shader = Shader([open('map.vert', 'r').read()], [open('map.frag', 'r').read()])
 draw_order = get_draw_order()
 vertices, tex_coords = prepare_tile_vertices(draw_order)
 
@@ -152,7 +181,11 @@ class MapGroup(pyglet.graphics.Group):
 map_vlist = batch.add(len(draw_order) * 4, GL_QUADS, MapGroup(ShaderGroup(map_shader, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0)))),
     ('v2f/static', vertices),
     ('t3f/static', tex_coords),
+    ('c3B/dynamic', prepare_lighting()),
 )
+
+def update_lighting():
+    map_vlist.colors = prepare_lighting()
 
 glEnable(GL_BLEND)
 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
