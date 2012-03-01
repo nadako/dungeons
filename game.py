@@ -1,3 +1,4 @@
+import greenlet
 import random
 import pyglet
 from pyglet.gl import *
@@ -8,6 +9,7 @@ from eight2empire import TRANSITION_TILES
 from graphics import TextureGroup, ShaderGroup
 from shader import Shader
 from shadowcaster import ShadowCaster
+from timing import ACTION_COST, Actor, TimeSystem
 
 TILE_SIZE = 8
 ZOOM = 4
@@ -46,8 +48,13 @@ def move_hero(dx, dy):
         hero_y += dy
         update_lighting()
 
-def is_wall(x, y):
+def in_bounds(x, y):
     if x < 0 or x >= dungeon.size.x or y < 0 or y >= dungeon.size.y:
+        return False
+    return True
+
+def is_wall(x, y):
+    if not in_bounds(x, y):
         return True
     return dungeon.grid[y][x] in (TILE_WALL, TILE_EMPTY)
 
@@ -105,12 +112,9 @@ def get_draw_order():
     result = []
     for y, row in enumerate(dungeon.grid):
         for x, tile in enumerate(row):
-            if tile == TILE_EMPTY:
-                result.append((x, y, TILE_EMPTY))
-            else:
-                result.append((x, y, TILE_FLOOR))
-                if tile == TILE_WALL:
-                    result.append((x, y, TILE_WALL))
+            result.append((x, y, TILE_FLOOR))
+            if tile == TILE_WALL:
+                result.append((x, y, TILE_WALL))
     return result
 
 def prepare_tile_vertices(draw_order):
@@ -138,12 +142,19 @@ def prepare_tile_vertices(draw_order):
 
 explored = {}
 
+MIN_LIGHT = 0.3
+
+def adjust_light(intensity):
+    return MIN_LIGHT + (1.0 - MIN_LIGHT) * intensity
+
 def prepare_lighting():
     global hero_x, hero_y, draw_order, explored
 
     lightmap = {(hero_x, hero_y): 1}
     def set_light(x, y, intensity):
         lightmap[x, y] = intensity
+        if intensity > 0:
+            explored[x, y] = True
 
     caster = ShadowCaster(is_wall, set_light)
     caster.calculate_light(hero_x, hero_y, LIGHT_RADIUS)
@@ -151,13 +162,56 @@ def prepare_lighting():
     buffer = []
     for x, y, tile in draw_order:
         l = lightmap.get((x, y), 0)
+
         if l > 0:
-            explored[x, y] = True
-            l = 0.3 + 0.7 * l
+            l = adjust_light(l)
         elif explored.get((x, y)):
-            l = 0.3
-        l = int(l * 255)
-        buffer.extend((l, l, l) * 4)
+            l = MIN_LIGHT
+
+        for _ in xrange(4):
+            buffer.extend((int(l * 255), ) * 3)
+
+
+# the following the "smooth" fog
+# very unfinished, buggy and SLOW
+# dont evn look at it for now
+
+#        fourth_l = l / 4.0
+#
+#        tl = fourth_l
+#        if in_bounds(x - 1, y + 1):
+#            tl += lightmap.get((x - 1, y + 1), 0) / 4.0
+#        if in_bounds(x - 1, y):
+#            tl += lightmap.get((x - 1, y), 0) / 4.0
+#        if in_bounds(x, y + 1):
+#            tl += lightmap.get((x, y + 1), 0) / 4.0
+#
+#        tr = fourth_l
+#        if in_bounds(x + 1, y + 1):
+#            tr += lightmap.get((x + 1, y + 1), 0) / 4.0
+#        if in_bounds(x + 1, y):
+#            tr += lightmap.get((x + 1, y), 0) / 4.0
+#        if in_bounds(x, y + 1):
+#            tr += lightmap.get((x, y + 1), 0) / 4.0
+#
+#        bl = fourth_l
+#        if in_bounds(x - 1, y - 1):
+#            bl += lightmap.get((x - 1, y - 1), 0) / 4.0
+#        if in_bounds(x - 1, y):
+#            bl += lightmap.get((x - 1, y), 0) / 4.0
+#        if in_bounds(x, y + 1):
+#            bl += lightmap.get((x, y - 1), 0) / 4.0
+#
+#        br = fourth_l
+#        if in_bounds(x + 1, y - 1):
+#            br += lightmap.get((x + 1, y - 1), 0) / 4.0
+#        if in_bounds(x + 1, y):
+#            br += lightmap.get((x + 1, y), 0) / 4.0
+#        if in_bounds(x, y - 1):
+#            br += lightmap.get((x, y - 1), 0) / 4.0
+#
+#        for v in (bl, br, tr, tl):
+#            buffer.extend((int(v * 255), ) * 3)
 
     return buffer
 
@@ -190,17 +244,16 @@ def update_lighting():
 glEnable(GL_BLEND)
 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-@window.event
-def on_draw():
-    window.clear()
-    glPushMatrix()
-    glScalef(ZOOM, ZOOM, 1)
-    batch.draw()
-    glPopMatrix()
+class Player(object):
 
-def process_keys():
-    while True:
-        sym, mod = yield
+    def __init__(self):
+        control_actor = Actor(100, self.process_control)
+        self.actors = (control_actor, )
+        self.texture = creatures_tex[HERO_TEX]
+
+    def process_control(self):
+        print 'Player acts. Waiting for input...'
+        sym, mod = wait_key()
 
         if sym == key.NUM_8:
             move_hero(0, 1)
@@ -219,11 +272,40 @@ def process_keys():
         elif sym == key.NUM_3:
             move_hero(1, -1)
 
-key_processor = process_keys()
-key_processor.send(None) # start the coroutine
+        return ACTION_COST
+
+objects = [Player()]
+
+def processor():
+    global objects
+
+    actors = []
+    for object in objects:
+        actors.extend(object.actors)
+
+    time_system = TimeSystem(actors)
+
+    while True:
+        time_system.tick()
+
+g_processor = greenlet.greenlet(processor)
+
+@window.event
+def on_draw():
+    window.clear()
+    glPushMatrix()
+    glScalef(ZOOM, ZOOM, 1)
+    batch.draw()
+    glPopMatrix()
+
+def wait_key():
+    sym, mod = greenlet.getcurrent().parent.switch()
+    return sym, mod
+
+g_processor.switch()
 
 @window.event
 def on_key_press(sym, mod):
-    key_processor.send((sym, mod))
+    g_processor.switch(sym, mod)
 
 pyglet.app.run()
