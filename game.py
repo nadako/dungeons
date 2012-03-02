@@ -3,8 +3,9 @@ import random
 import pyglet
 from pyglet.gl import *
 from pyglet.window import key
+from dungeon import TileGrid, TileType
 
-from generator import DungeonGenerator, TILE_FLOOR, TILE_WALL, TILE_EMPTY
+from generator import DungeonGenerator
 from eight2empire import TRANSITION_TILES
 from graphics import TextureGroup, ShaderGroup
 from shader import Shader
@@ -26,8 +27,10 @@ creatures_img = pyglet.image.load('creatures.png')
 creatures_seq = pyglet.image.ImageGrid(creatures_img, creatures_img.height / TILE_SIZE, creatures_img.width / TILE_SIZE)
 creatures_tex = creatures_seq.get_texture_sequence()
 
-dungeon = DungeonGenerator((100, 100), 100, (3, 3), (20, 20))
+tile_grid = TileGrid(100, 100)
+dungeon = DungeonGenerator(tile_grid)
 dungeon.generate()
+dungeon.print_dungeon()
 
 window = pyglet.window.Window(1024, 768, 'Dungeon')
 window.set_location(40, 60)
@@ -43,20 +46,15 @@ hero_y = starting_room.position.y + starting_room.size.y / 2
 
 def move_hero(dx, dy):
     global hero_x, hero_y
-    if dungeon.grid[hero_y + dy][hero_x + dx] == TILE_FLOOR:
+    if tile_grid[hero_x + dx, hero_y + dy].is_passable:
         hero_x += dx
         hero_y += dy
         update_lighting()
 
 def in_bounds(x, y):
-    if x < 0 or x >= dungeon.size.x or y < 0 or y >= dungeon.size.y:
+    if x < 0 or x >= tile_grid.size_x or y < 0 or y >= tile_grid.size_y:
         return False
     return True
-
-def is_wall(x, y):
-    if not in_bounds(x, y):
-        return True
-    return dungeon.grid[y][x] in (TILE_WALL, TILE_EMPTY)
 
 def get_transition_tile(x, y):
     n = 1
@@ -67,6 +65,11 @@ def get_transition_tile(x, y):
     ne = 16
     se = 32
     sw = 64
+
+    def is_wall(x, y):
+        if not in_bounds(x, y):
+            return True
+        return tile_grid[x, y].type in (TileType.WALL, TileType.EMPTY)
 
     v = 0
     if is_wall(x, y + 1):
@@ -110,11 +113,11 @@ hero_vlist = batch.add(4, GL_QUADS, HeroGroup(TextureGroup(creatures_tex, pyglet
 
 def get_draw_order():
     result = []
-    for y, row in enumerate(dungeon.grid):
-        for x, tile in enumerate(row):
-            result.append((x, y, TILE_FLOOR))
-            if tile == TILE_WALL:
-                result.append((x, y, TILE_WALL))
+    for x in xrange(tile_grid.size_x):
+        for y in xrange(tile_grid.size_y):
+            result.append((x, y, TileType.FLOOR))
+            if tile_grid[x, y].type == TileType.WALL:
+                result.append((x, y, TileType.WALL))
     return result
 
 def prepare_tile_vertices(draw_order):
@@ -130,9 +133,9 @@ def prepare_tile_vertices(draw_order):
         y2 = y1 + TILE_SIZE
         vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
 
-        if tile == TILE_WALL:
+        if tile == TileType.WALL:
             tex = get_transition_tile(x, y)
-        elif tile == TILE_FLOOR:
+        elif tile == TileType.FLOOR:
             tex = floor_tex
         else:
             tex = empty_tex
@@ -156,7 +159,12 @@ def prepare_lighting():
         if intensity > 0:
             explored[x, y] = True
 
-    caster = ShadowCaster(is_wall, set_light)
+    def blocks_light(x, y):
+        if not in_bounds(x, y):
+            return False
+        return not tile_grid[x, y].is_transparent
+
+    caster = ShadowCaster(blocks_light, set_light)
     caster.calculate_light(hero_x, hero_y, LIGHT_RADIUS)
 
     buffer = []

@@ -2,12 +2,9 @@ import collections
 import random
 
 # handy tuple type for storing coordinates, sizes or directions
-_vec = collections.namedtuple('vec', 'x y')
+from dungeon import TileType, Door
 
-# tile constants used for grid
-TILE_EMPTY = ' '
-TILE_WALL = '#'
-TILE_FLOOR = '.'
+_vec = collections.namedtuple('vec', 'x y')
 
 # direction constants, also contain coordinate offset
 DIR_N = _vec(0, -1)
@@ -25,9 +22,9 @@ def square_room_generator(min_size, max_size):
         row = []
         for x in xrange(size.x):
             if x == 0 or y == 0 or x == size.x -1 or y == size.y - 1:
-                row.append(TILE_WALL)
+                row.append(TileType.WALL)
             else:
-                row.append(TILE_FLOOR)
+                row.append(TileType.FLOOR)
         tiles.append(row)
 
     return tiles
@@ -62,16 +59,18 @@ class DungeonGenerator(object):
     functionality to generate random dungeon.
     """
 
-    def __init__(self, size, max_rooms, min_room_size, max_room_size):
-        self.size = _vec(*size)
+    def __init__(self, grid, max_rooms=100, min_room_size=(3, 3), max_room_size=(12, 12), door_chance=75, door_open_chance=10):
+        self.grid = grid
         self.min_room_size = _vec(*min_room_size)
         self.max_room_size = _vec(*max_room_size)
         self.max_rooms = max_rooms
+        self.door_chance = door_chance
+        self.door_open_chance = door_open_chance
         self.clear()
 
     def clear(self):
         # clear grid and room list
-        self.grid = [[TILE_EMPTY for x in xrange(self.size.x)] for y in xrange(self.size.y)]
+        self.grid.clear()
         self.rooms = []
 
     def generate_room(self):
@@ -94,8 +93,8 @@ class DungeonGenerator(object):
         for y in xrange(room.position.y, room.position.y + room.size.y):
             for x in xrange(room.position.x, room.position.x + room.size.x):
                 tile = room.tiles[y - room.position.y][x - room.position.x]
-                if tile != TILE_EMPTY:
-                    self.grid[y][x] = tile
+                if tile != TileType.EMPTY:
+                    self.grid[x, y].type = tile
 
     def choose_gate(self):
         # choose random room and side
@@ -124,28 +123,36 @@ class DungeonGenerator(object):
         ystart = position.y
         yend = ystart + room.size.y
 
-        if xstart < 0 or xend > self.size.x or ystart < 0 or yend > self.size.y:
+        if xstart < 0 or xend > self.grid.size_x or ystart < 0 or yend > self.grid.size_y:
             return False
 
         for y in xrange(ystart, yend):
             for x in xrange(xstart, xend):
-                if room.tiles[y - ystart][x - xstart] == TILE_EMPTY:
+                if room.tiles[y - ystart][x - xstart] == TileType.EMPTY:
                     continue
-                elif self.grid[y][x] != TILE_EMPTY:
+                elif self.grid[x, y].type != TileType.EMPTY:
                     return False
 
         return True
 
     def connect_rooms(self, gate, dir):
-        self.grid[gate.y][gate.x] = TILE_FLOOR
-        self.grid[gate.y + dir.y][gate.x + dir.x] = TILE_FLOOR
+        self.grid[gate.x, gate.y].type = TileType.FLOOR
+        self.grid[gate.x + dir.x, gate.y + dir.y].type = TileType.FLOOR
+
+        if random.random() * 100 < self.door_chance:
+            is_open = random.random() * 100 < self.door_open_chance
+            if random.random() < 0.5:
+                self.grid[gate.x, gate.y].add_object(Door(is_open))
+            else:
+                self.grid[gate.x + dir.x, gate.y + dir.y].add_object(Door(is_open))
+
 
     def generate(self):
         room = self.generate_room()
-        center = _vec((self.size.x - room.size.x) / 2, (self.size.y - room.size.y) / 2)
+        center = _vec((self.grid.size_x - room.size.x) / 2, (self.grid.size_y - room.size.y) / 2)
         self.place_room(room, center)
 
-        for i in xrange(self.size.x * self.size.y * 2):
+        for i in xrange(self.grid.size_x * self.grid.size_y * 2):
             # if we generated enough rooms, stop
             if self.max_rooms and len(self.rooms) >= self.max_rooms:
                 break
@@ -175,7 +182,27 @@ class DungeonGenerator(object):
                 i += 1
 
     def print_dungeon(self):
-        print 'size: %dx%d' % self.size
+        print 'size: %dx%d' % (self.grid.size_x, self.grid.size_y)
         print 'rooms: %d / %d' % (len(self.rooms), self.max_rooms)
-        for row in self.grid:
-            print ''.join(row)
+        for y in xrange(self.grid.size_y):
+            row = ''
+
+            for x in xrange(self.grid.size_x):
+                tile = self.grid[x, y]
+                placed = False
+                if tile.objects:
+                    for obj in tile.objects:
+                        if isinstance(obj, Door):
+                            row += obj.is_open and '/' or '+'
+                            placed = True
+                            break
+                    if placed:
+                        continue
+                if tile.type == TileType.WALL:
+                    row += '#'
+                elif tile.type == TileType.FLOOR:
+                    row += '.'
+                else:
+                    row += ' '
+
+            print row
