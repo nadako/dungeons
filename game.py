@@ -116,10 +116,17 @@ class HeroGroup(pyglet.graphics.Group):
     def unset_state(self):
         glPopMatrix()
 
-hero_vlist = batch.add(4, GL_QUADS, HeroGroup(TextureGroup(creatures_tex, pyglet.graphics.OrderedGroup(1))),
-    ('v2i/statc', (0, 0, TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, 0, TILE_SIZE)),
-    ('t3f/statc', creatures_tex[HERO_TEX].tex_coords)
-)
+def create_tile_vlist(tex, row, col, order=0, group=None):
+    if group is None:
+        group = TextureGroup(tex, pyglet.graphics.OrderedGroup(order))
+    else:
+        group.parent = TextureGroup(tex, pyglet.graphics.OrderedGroup(order))
+    return batch.add(4, GL_QUADS, group,
+        ('v2i/static', (0, 0, TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, 0, TILE_SIZE)),
+        ('t3f/static', tex[row, col].tex_coords)
+    )
+
+hero_vlist = create_tile_vlist(creatures_tex, HERO_TEX[0], HERO_TEX[1], group=HeroGroup())
 
 def get_draw_order():
     result = []
