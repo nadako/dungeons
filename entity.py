@@ -1,3 +1,7 @@
+class Component(object):
+    pass
+
+
 class EntityManager(object):
 
     def __init__(self):
@@ -19,8 +23,18 @@ class EntityManager(object):
     def get_proxy(self, id):
         return EntityProxy(self, id)
 
+    def get_component_class(self, component):
+        component_class = None
+        for cls in component.__class__.__mro__:
+            if cls is Component:
+                break
+            component_class = cls
+        else:
+            raise RuntimeError('Component %r doesnt derive from Component' % component)
+        return component_class
+
     def add_component(self, id, component):
-        component_class = component.__class__
+        component_class = self.get_component_class(component)
         store = self.components.get(component_class)
         if store is None:
             store = self.components[component_class] = {}
