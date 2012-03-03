@@ -13,7 +13,7 @@ from shadowcaster import ShadowCaster
 from timing import ACTION_COST, Actor, TimeSystem
 
 TILE_SIZE = 8
-ZOOM = 4
+ZOOM = 3
 WALL_TEX_ROW = 33
 FLOOR_TEX = 39, 4
 HERO_TEX = 39, 2
@@ -39,8 +39,10 @@ dungeon.print_dungeon()
 window = pyglet.window.Window(1024, 768, 'Dungeon')
 window.set_location(40, 60)
 
-center_anchor_x = window.width / 2 / ZOOM
-center_anchor_y = window.height / 2 / ZOOM
+def get_center_anchor():
+    x = window.width / 2 / ZOOM
+    y = window.height / 2 / ZOOM
+    return x, y
 
 batch = pyglet.graphics.Batch()
 
@@ -108,7 +110,8 @@ class HeroGroup(pyglet.graphics.Group):
 
     def set_state(self):
         glPushMatrix()
-        glTranslatef(center_anchor_x, center_anchor_y, 0)
+        x, y = get_center_anchor()
+        glTranslatef(x, y, 0)
 
     def unset_state(self):
         glPopMatrix()
@@ -210,7 +213,8 @@ def draw_tile_objects():
             object = objects[0]
             if isinstance(object, Door):
                 glPushMatrix()
-                glTranslatef(x * TILE_SIZE + center_anchor_x - hero_x * TILE_SIZE, y * TILE_SIZE + center_anchor_y - hero_y * TILE_SIZE, 0)
+                ax, ay = get_center_anchor()
+                glTranslatef(x * TILE_SIZE + ax - hero_x * TILE_SIZE, y * TILE_SIZE + ay - hero_y * TILE_SIZE, 0)
                 if object.is_open:
                     open_door_tex.blit(0, 0)
                 else:
@@ -229,7 +233,8 @@ class MapGroup(pyglet.graphics.Group):
 
     def set_state(self):
         glPushMatrix()
-        glTranslatef(center_anchor_x - hero_x * TILE_SIZE, center_anchor_y - hero_y * TILE_SIZE, 0)
+        x, y = get_center_anchor()
+        glTranslatef(x - hero_x * TILE_SIZE, y - hero_y * TILE_SIZE, 0)
 
     def unset_state(self):
         glPopMatrix()
@@ -309,6 +314,16 @@ g_processor.switch()
 
 @window.event
 def on_key_press(sym, mod):
-    g_processor.switch(sym, mod)
+    global ZOOM
+    if sym == key._1:
+        ZOOM = 1
+    elif sym == key._2:
+        ZOOM = 2
+    elif sym == key._3:
+        ZOOM = 3
+    elif sym == key._4:
+        ZOOM = 4
+    else:
+        g_processor.switch(sym, mod)
 
 pyglet.app.run()
