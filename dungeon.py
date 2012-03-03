@@ -40,6 +40,9 @@ class Tile(object):
 
         return True
 
+    def bump(self, creature):
+        for object in self.objects:
+            object.bump(creature)
 
 class TileType(object):
 
@@ -87,7 +90,7 @@ class Door(TileObject):
 
     @property
     def is_passable(self):
-        return True # self.is_open
+        return self.is_open
 
     def bump(self, creature):
         self.is_open = not self.is_open

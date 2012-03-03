@@ -50,10 +50,13 @@ hero_y = starting_room.position.y + starting_room.size.y / 2
 
 def move_hero(dx, dy):
     global hero_x, hero_y
-    if tile_grid[hero_x + dx, hero_y + dy].is_passable:
+    tile = tile_grid[hero_x + dx, hero_y + dy]
+    if tile.is_passable:
         hero_x += dx
         hero_y += dy
-        update_lighting()
+    else:
+        tile.bump(None)
+    update_lighting()
 
 def in_bounds(x, y):
     if x < 0 or x >= tile_grid.size_x or y < 0 or y >= tile_grid.size_y:
