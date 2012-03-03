@@ -3,7 +3,7 @@ import random
 import pyglet
 from pyglet.gl import *
 from pyglet.window import key
-from dungeon import TileGrid, TileType
+from dungeon import TileGrid, TileType, Door
 
 from generator import DungeonGenerator
 from eight2empire import TRANSITION_TILES
@@ -18,17 +18,21 @@ WALL_TEX_ROW = 33
 FLOOR_TEX = 39, 4
 HERO_TEX = 39, 2
 LIGHT_RADIUS = 10
+CLOSED_DOOR_TEX = 9, 3
+OPEN_DOOR_TEX = 8, 3
 
 dungeon_img = pyglet.image.load('dungeon.png')
 dungeon_seq = pyglet.image.ImageGrid(dungeon_img, dungeon_img.height / TILE_SIZE, dungeon_img.width / TILE_SIZE)
 dungeon_tex = dungeon_seq.get_texture_sequence()
+open_door_tex = dungeon_tex[OPEN_DOOR_TEX]
+closed_door_tex = dungeon_tex[CLOSED_DOOR_TEX]
 
 creatures_img = pyglet.image.load('creatures.png')
 creatures_seq = pyglet.image.ImageGrid(creatures_img, creatures_img.height / TILE_SIZE, creatures_img.width / TILE_SIZE)
 creatures_tex = creatures_seq.get_texture_sequence()
 
 tile_grid = TileGrid(100, 100)
-dungeon = DungeonGenerator(tile_grid)
+dungeon = DungeonGenerator(tile_grid, min_room_size=(6, 6), max_room_size=(20, 20), door_chance=50)
 dungeon.generate()
 dungeon.print_dungeon()
 
@@ -144,17 +148,23 @@ def prepare_tile_vertices(draw_order):
     return vertices, tex_coords
 
 explored = {}
+lightmap = {}
 
 MIN_LIGHT = 0.3
+
+def is_in_fov(x, y):
+    return lightmap.get((x, y), 0) > 0
 
 def adjust_light(intensity):
     return MIN_LIGHT + (1.0 - MIN_LIGHT) * intensity
 
 def prepare_lighting():
-    global hero_x, hero_y, draw_order, explored
+    global hero_x, hero_y, draw_order, explored, lightmap
 
-    lightmap = {(hero_x, hero_y): 1}
+    lightmap.clear()
+    lightmap[hero_x, hero_y] = 1
     def set_light(x, y, intensity):
+        global lightmap, explored
         lightmap[x, y] = intensity
         if intensity > 0:
             explored[x, y] = True
@@ -179,49 +189,30 @@ def prepare_lighting():
         for _ in xrange(4):
             buffer.extend((int(l * 255), ) * 3)
 
-
-# the following the "smooth" fog
-# very unfinished, buggy and SLOW
-# dont evn look at it for now
-
-#        fourth_l = l / 4.0
-#
-#        tl = fourth_l
-#        if in_bounds(x - 1, y + 1):
-#            tl += lightmap.get((x - 1, y + 1), 0) / 4.0
-#        if in_bounds(x - 1, y):
-#            tl += lightmap.get((x - 1, y), 0) / 4.0
-#        if in_bounds(x, y + 1):
-#            tl += lightmap.get((x, y + 1), 0) / 4.0
-#
-#        tr = fourth_l
-#        if in_bounds(x + 1, y + 1):
-#            tr += lightmap.get((x + 1, y + 1), 0) / 4.0
-#        if in_bounds(x + 1, y):
-#            tr += lightmap.get((x + 1, y), 0) / 4.0
-#        if in_bounds(x, y + 1):
-#            tr += lightmap.get((x, y + 1), 0) / 4.0
-#
-#        bl = fourth_l
-#        if in_bounds(x - 1, y - 1):
-#            bl += lightmap.get((x - 1, y - 1), 0) / 4.0
-#        if in_bounds(x - 1, y):
-#            bl += lightmap.get((x - 1, y), 0) / 4.0
-#        if in_bounds(x, y + 1):
-#            bl += lightmap.get((x, y - 1), 0) / 4.0
-#
-#        br = fourth_l
-#        if in_bounds(x + 1, y - 1):
-#            br += lightmap.get((x + 1, y - 1), 0) / 4.0
-#        if in_bounds(x + 1, y):
-#            br += lightmap.get((x + 1, y), 0) / 4.0
-#        if in_bounds(x, y - 1):
-#            br += lightmap.get((x, y - 1), 0) / 4.0
-#
-#        for v in (bl, br, tr, tl):
-#            buffer.extend((int(v * 255), ) * 3)
-
     return buffer
+
+def draw_tile_objects():
+    starty = max(0, hero_y - LIGHT_RADIUS)
+    endy = min(hero_y + LIGHT_RADIUS, tile_grid.size_y)
+    startx = max(0, hero_x - LIGHT_RADIUS)
+    endx = min(hero_x + LIGHT_RADIUS, tile_grid.size_x)
+
+    for x in xrange(startx, endx):
+        for y in xrange(starty, endy):
+            if not is_in_fov(x, y):
+                continue
+            objects = tile_grid[x, y].objects
+            if not objects:
+                continue
+            object = objects[0]
+            if isinstance(object, Door):
+                glPushMatrix()
+                glTranslatef(x * TILE_SIZE + center_anchor_x - hero_x * TILE_SIZE, y * TILE_SIZE + center_anchor_y - hero_y * TILE_SIZE, 0)
+                if object.is_open:
+                    open_door_tex.blit(0, 0)
+                else:
+                    closed_door_tex.blit(0, 0)
+                glPopMatrix()
 
 
 map_shader = Shader([open('map.vert', 'r').read()], [open('map.frag', 'r').read()])
@@ -304,6 +295,7 @@ def on_draw():
     glPushMatrix()
     glScalef(ZOOM, ZOOM, 1)
     batch.draw()
+    draw_tile_objects()
     glPopMatrix()
 
 def wait_key():

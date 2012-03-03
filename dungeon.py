@@ -87,7 +87,7 @@ class Door(TileObject):
 
     @property
     def is_passable(self):
-        return self.is_open
+        return True # self.is_open
 
     def bump(self, creature):
         self.is_open = not self.is_open
