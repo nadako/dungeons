@@ -69,7 +69,6 @@ class EntityProxy(object):
 
     __slots__ = ('manager', 'id')
 
-
     def __init__(self, manager, id):
         self.manager = manager
         self.id = id
