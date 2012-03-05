@@ -235,6 +235,7 @@ class LevelGenerator(object):
 import pyglet
 import greenlet
 from pyglet.window import key
+from eight2empire import TRANSITION_TILES
 
 def load_tilegrid(name):
     img = pyglet.resource.image(name)
@@ -244,8 +245,8 @@ def load_tilegrid(name):
 dungeon_tex = load_tilegrid('dungeon.png')
 creature_tex = load_tilegrid('creatures.png')
 
+WALL_TEX_ROW = 33
 floor_tex = dungeon_tex[39, 4]
-wall_tex = dungeon_tex[33, 20]
 player_tex = creature_tex[39, 2]
 monster_tex = creature_tex[22, 1]
 closed_door_tex = dungeon_tex[9, 3]
@@ -416,6 +417,43 @@ def on_key_press(sym, mod):
 
 from pyglet.gl import *
 
+def get_transition_tile(x, y):
+    n = 1
+    e = 2
+    s = 4
+    w = 8
+    nw = 128
+    ne = 16
+    se = 32
+    sw = 64
+
+    def is_wall(x, y):
+        if not level.in_bounds(x, y):
+            return True
+        return level.get_tile(x, y) in (TILE_WALL, TILE_EMPTY)
+
+    v = 0
+    if is_wall(x, y + 1):
+        v |= n
+    if is_wall(x + 1, y):
+        v |= e
+    if is_wall(x, y - 1):
+        v |= s
+    if is_wall(x - 1, y):
+        v |= w
+    if is_wall(x - 1, y + 1):
+        v |= nw
+    if is_wall(x + 1, y + 1):
+        v |= ne
+    if is_wall(x - 1, y - 1):
+        v |= sw
+    if is_wall(x + 1, y - 1):
+        v |= se
+
+    if v not in TRANSITION_TILES:
+        v &= 15
+
+    return dungeon_tex[WALL_TEX_ROW, TRANSITION_TILES[v]]
 
 def prepare_level_sprites(level):
     rows = []
@@ -424,7 +462,8 @@ def prepare_level_sprites(level):
         for x in xrange(level.size_x):
             tile = level.get_tile(x, y)
             if tile == TILE_WALL:
-                sprite = pyglet.sprite.Sprite(wall_tex, x * 8, y * 8)
+                tex = get_transition_tile(x, y)
+                sprite = pyglet.sprite.Sprite(tex, x * 8, y * 8)
             elif tile == TILE_FLOOR:
                 sprite = pyglet.sprite.Sprite(floor_tex, x * 8, y * 8)
             else:
