@@ -44,7 +44,7 @@ level = Level(70, 50)
 generator = LevelGenerator(level)
 generator.generate()
 
-player = LevelObject(actor=Actor(100, player_act), fov=FOV(10), movement=Movement(), renderable=Renderable(player_tex))
+player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex))
 player.blocks_movement = True
 
 room = random.choice(level.rooms)
@@ -59,7 +59,7 @@ for room in level.rooms:
         if (x, y) in level.objects and level.objects[x, y]:
             continue
 
-        monster = LevelObject(actor=Actor(100, monster_act), movement=Movement(), renderable=Renderable(monster_tex))
+        monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(monster_tex))
         monster.blocks_movement = True
         level.add_object(monster, x, y)
 
@@ -156,7 +156,7 @@ def on_draw():
 
         if (x, y) in level.objects and len(level.objects[x, y]) > 0:
             for obj in level.objects[x, y]:
-                if hasattr(obj, 'renderable'):
+                if hasattr(obj, Renderable.component_name):
                     sprite = obj.renderable.sprite
                     break
 
