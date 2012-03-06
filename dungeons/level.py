@@ -12,14 +12,27 @@ class LevelObject(object):
     blocks_sight = False
     blocks_movement = False
 
-    def __init__(self, **components):
+    def __init__(self, *components):
         self.x = None
         self.y = None
         self.level = None
 
-        for name, value in components.items():
-            setattr(self, name, value)
-            value.owner = self
+        for component in components:
+            self.add_component(component)
+
+    def add_component(self, component):
+        assert isinstance(component, Component)
+        if hasattr(self, component.component_name):
+            raise RuntimeError('Trying to add duplicate component with name %s: %r' % (component.component_name, component))
+        setattr(self, component.component_name, component)
+        component.owner = self
+
+    def remove_component(self, name):
+        component = getattr(self, name, None)
+        if component:
+            assert isinstance(component, Component)
+            delattr(self, name)
+            component.owner = None
 
     def bump(self, who):
         pass
@@ -83,7 +96,7 @@ class Level(object):
         obj.y = y
         obj.level = self
 
-        actor = getattr(obj, 'actor', None)
+        actor = getattr(obj, Actor.component_name, None)
         if actor:
             self.actors.append(actor)
 
@@ -93,7 +106,7 @@ class Level(object):
         obj.y = None
         obj.level = None
 
-        actor = getattr(obj, 'actor', None)
+        actor = getattr(obj, Actor.component_name, None)
         if actor:
             self.actors.remove(actor)
 
@@ -114,10 +127,13 @@ class Level(object):
 
 class Component(object):
 
+    component_name = None
     owner = None
 
 
 class Actor(Component):
+
+    component_name = 'actor'
 
     def __init__(self, speed, act=None):
         self.energy = 0
@@ -131,6 +147,8 @@ class Actor(Component):
 
 
 class FOV(Component):
+
+    component_name = 'fov'
 
     def __init__(self, radius):
         self.radius = radius
@@ -151,6 +169,8 @@ class FOV(Component):
 
 class Movement(Component):
 
+    component_name = 'movement'
+
     def move(self, dx, dy):
         new_x = self.owner.x + dx
         new_y = self.owner.y + dy
@@ -168,11 +188,15 @@ class Movement(Component):
 
 class Renderable(Component):
 
+    component_name = 'renderable'
+
     def __init__(self, tex):
         self.sprite = pyglet.sprite.Sprite(tex)
 
 
 class DoorRenderable(Component):
+
+    component_name = 'renderable'
 
     def __init__(self):
         self.open_sprite = pyglet.sprite.Sprite(open_door_tex)
@@ -187,7 +211,7 @@ class Door(LevelObject):
 
     def __init__(self, is_open):
         self.is_open = is_open
-        super(Door, self).__init__(renderable=DoorRenderable())
+        super(Door, self).__init__(DoorRenderable())
 
     @property
     def blocks_sight(self):
