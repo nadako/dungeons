@@ -40,7 +40,8 @@ class LevelObject(object):
 
 class Level(object):
 
-    def __init__(self, size_x, size_y):
+    def __init__(self, game, size_x, size_y):
+        self.game = game
         self.size_x = size_x
         self.size_y = size_y
         self.grid = [TILE_EMPTY for _ in xrange(size_x * size_y)]
