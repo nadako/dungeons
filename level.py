@@ -1,7 +1,7 @@
 from collections import defaultdict, deque
 
 import pyglet
-from dungeons.temp import open_door_tex, closed_door_tex
+from temp import open_door_tex, closed_door_tex
 
 from level_generator import TILE_EMPTY, TILE_WALL, TILE_DOOR_CLOSED, TILE_DOOR_OPEN, TILE_FLOOR
 from shadowcaster import ShadowCaster

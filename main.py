@@ -1,6 +1,6 @@
 import pyglet
 
-from dungeons.game import Game
+from game import Game
 
 game = Game()
 game.start()

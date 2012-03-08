@@ -1,336 +1,172 @@
-import greenlet
 import random
+
+import greenlet
 import pyglet
-from pyglet.gl import *
 from pyglet.window import key
-from dungeon import TileGrid, TileType, Door
+from pyglet import gl
 
-from generator import DungeonGenerator
-from eight2empire import TRANSITION_TILES
-from graphics import TextureGroup, ShaderGroup
-from shader import Shader
-from shadowcaster import ShadowCaster
-from timing import ACTION_COST, Actor, TimeSystem
+from level import Level, LevelObject, Actor, Movement, Renderable, FOV
+from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
+from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex
 
-TILE_SIZE = 8
-ZOOM = 3
-WALL_TEX_ROW = 33
-FLOOR_TEX = 39, 4
-HERO_TEX = 39, 2
-LIGHT_RADIUS = 10
-CLOSED_DOOR_TEX = 9, 3
-OPEN_DOOR_TEX = 8, 3
-
-dungeon_img = pyglet.image.load('dungeon.png')
-dungeon_seq = pyglet.image.ImageGrid(dungeon_img, dungeon_img.height / TILE_SIZE, dungeon_img.width / TILE_SIZE)
-dungeon_tex = dungeon_seq.get_texture_sequence()
-open_door_tex = dungeon_tex[OPEN_DOOR_TEX]
-closed_door_tex = dungeon_tex[CLOSED_DOOR_TEX]
-
-creatures_img = pyglet.image.load('creatures.png')
-creatures_seq = pyglet.image.ImageGrid(creatures_img, creatures_img.height / TILE_SIZE, creatures_img.width / TILE_SIZE)
-creatures_tex = creatures_seq.get_texture_sequence()
-
-tile_grid = TileGrid(100, 100)
-dungeon = DungeonGenerator(tile_grid, min_room_size=(6, 6), max_room_size=(20, 20), door_chance=50)
-dungeon.generate()
-dungeon.print_dungeon()
-
-window = pyglet.window.Window(1024, 768, 'Dungeon')
-window.set_location(40, 60)
-
-def get_center_anchor():
-    x = window.width / 2 / ZOOM
-    y = window.height / 2 / ZOOM
-    return x, y
-
-batch = pyglet.graphics.Batch()
-
-starting_room = random.choice(dungeon.rooms)
-hero_x = starting_room.position.x + starting_room.size.x / 2
-hero_y = starting_room.position.y + starting_room.size.y / 2
-
-def move_hero(dx, dy):
-    global hero_x, hero_y
-    tile = tile_grid[hero_x + dx, hero_y + dy]
-    if tile.is_passable:
-        hero_x += dx
-        hero_y += dy
-    else:
-        tile.bump(None)
-    update_lighting()
-
-def in_bounds(x, y):
-    if x < 0 or x >= tile_grid.size_x or y < 0 or y >= tile_grid.size_y:
-        return False
-    return True
-
-def get_transition_tile(x, y):
-    n = 1
-    e = 2
-    s = 4
-    w = 8
-    nw = 128
-    ne = 16
-    se = 32
-    sw = 64
-
-    def is_wall(x, y):
-        if not in_bounds(x, y):
-            return True
-        return tile_grid[x, y].type in (TileType.WALL, TileType.EMPTY)
-
-    v = 0
-    if is_wall(x, y + 1):
-        v |= n
-    if is_wall(x + 1, y):
-        v |= e
-    if is_wall(x, y - 1):
-        v |= s
-    if is_wall(x - 1, y):
-        v |= w
-    if is_wall(x - 1, y + 1):
-        v |= nw
-    if is_wall(x + 1, y + 1):
-        v |= ne
-    if is_wall(x - 1, y - 1):
-        v |= sw
-    if is_wall(x + 1, y - 1):
-        v |= se
-
-    if v not in TRANSITION_TILES:
-        v &= 15
-
-    return dungeon_tex[WALL_TEX_ROW, TRANSITION_TILES[v]]
-
-class HeroGroup(pyglet.graphics.Group):
-
-    def __init__(self, parent=None):
-        super(HeroGroup, self).__init__(parent)
-
-    def set_state(self):
-        glPushMatrix()
-        x, y = get_center_anchor()
-        glTranslatef(x, y, 0)
-
-    def unset_state(self):
-        glPopMatrix()
-
-def create_tile_vlist(tex, row, col, order=0, group=None):
-    if group is None:
-        group = TextureGroup(tex, pyglet.graphics.OrderedGroup(order))
-    else:
-        group.parent = TextureGroup(tex, pyglet.graphics.OrderedGroup(order))
-    return batch.add(4, GL_QUADS, group,
-        ('v2i/static', (0, 0, TILE_SIZE, 0, TILE_SIZE, TILE_SIZE, 0, TILE_SIZE)),
-        ('t3f/static', tex[row, col].tex_coords)
-    )
-
-hero_vlist = create_tile_vlist(creatures_tex, HERO_TEX[0], HERO_TEX[1], group=HeroGroup())
-
-def get_draw_order():
-    result = []
-    for x in xrange(tile_grid.size_x):
-        for y in xrange(tile_grid.size_y):
-            result.append((x, y, TileType.FLOOR))
-            if tile_grid[x, y].type == TileType.WALL:
-                result.append((x, y, TileType.WALL))
-    return result
-
-def prepare_tile_vertices(draw_order):
-    vertices = []
-    tex_coords = []
-    floor_tex = dungeon_tex[FLOOR_TEX]
-    empty_tex = dungeon_tex[WALL_TEX_ROW, 0]
-
-    for x, y, tile in draw_order:
-        x1 = x * TILE_SIZE
-        x2 = x1 + TILE_SIZE
-        y1 = y * TILE_SIZE
-        y2 = y1 + TILE_SIZE
-        vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
-
-        if tile == TileType.WALL:
-            tex = get_transition_tile(x, y)
-        elif tile == TileType.FLOOR:
-            tex = floor_tex
-        else:
-            tex = empty_tex
-        tex_coords.extend(tex.tex_coords)
-
-    return vertices, tex_coords
-
-explored = {}
-lightmap = {}
-
-MIN_LIGHT = 0.3
-
-def is_in_fov(x, y):
-    return lightmap.get((x, y), 0) > 0
-
-def adjust_light(intensity):
-    return MIN_LIGHT + (1.0 - MIN_LIGHT) * intensity
-
-def prepare_lighting():
-    global hero_x, hero_y, draw_order, explored, lightmap
-
-    lightmap.clear()
-    lightmap[hero_x, hero_y] = 1
-    def set_light(x, y, intensity):
-        global lightmap, explored
-        lightmap[x, y] = intensity
-        if intensity > 0:
-            explored[x, y] = True
-
-    def blocks_light(x, y):
-        if not in_bounds(x, y):
-            return False
-        return not tile_grid[x, y].is_transparent
-
-    caster = ShadowCaster(blocks_light, set_light)
-    caster.calculate_light(hero_x, hero_y, LIGHT_RADIUS)
-
-    buffer = []
-    for x, y, tile in draw_order:
-        l = lightmap.get((x, y), 0)
-
-        if l > 0:
-            l = adjust_light(l)
-        elif explored.get((x, y)):
-            l = MIN_LIGHT
-
-        for _ in xrange(4):
-            buffer.extend((int(l * 255), ) * 3)
-
-    return buffer
-
-def draw_tile_objects():
-    starty = max(0, hero_y - LIGHT_RADIUS)
-    endy = min(hero_y + LIGHT_RADIUS, tile_grid.size_y)
-    startx = max(0, hero_x - LIGHT_RADIUS)
-    endx = min(hero_x + LIGHT_RADIUS, tile_grid.size_x)
-
-    for x in xrange(startx, endx):
-        for y in xrange(starty, endy):
-            if not is_in_fov(x, y):
-                continue
-            objects = tile_grid[x, y].objects
-            if not objects:
-                continue
-            object = objects[0]
-            if isinstance(object, Door):
-                glPushMatrix()
-                ax, ay = get_center_anchor()
-                glTranslatef(x * TILE_SIZE + ax - hero_x * TILE_SIZE, y * TILE_SIZE + ay - hero_y * TILE_SIZE, 0)
-                if object.is_open:
-                    open_door_tex.blit(0, 0)
-                else:
-                    closed_door_tex.blit(0, 0)
-                glPopMatrix()
+from data.eight2empire import WALL_TRANSITION_TILES # load this dynamically, not import as python module
 
 
-map_shader = Shader([open('map.vert', 'r').read()], [open('map.frag', 'r').read()])
-draw_order = get_draw_order()
-vertices, tex_coords = prepare_tile_vertices(draw_order)
+class GameExit(Exception):
+    pass
 
-class MapGroup(pyglet.graphics.Group):
 
-    def __init__(self, parent=None):
-        super(MapGroup, self).__init__(parent)
+class Game(object):
 
-    def set_state(self):
-        glPushMatrix()
-        x, y = get_center_anchor()
-        glTranslatef(x - hero_x * TILE_SIZE, y - hero_y * TILE_SIZE, 0)
-
-    def unset_state(self):
-        glPopMatrix()
-
-map_vlist = batch.add(len(draw_order) * 4, GL_QUADS, MapGroup(ShaderGroup(map_shader, TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(0)))),
-    ('v2f/static', vertices),
-    ('t3f/static', tex_coords),
-    ('c3B/dynamic', prepare_lighting()),
-)
-
-def update_lighting():
-    map_vlist.colors = prepare_lighting()
-
-glEnable(GL_BLEND)
-glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
-class Player(object):
+    EVT_KEY_PRESS = 'key-press'
 
     def __init__(self):
-        control_actor = Actor(100, self.process_control)
-        self.actors = (control_actor, )
-        self.texture = creatures_tex[HERO_TEX]
+        self._g_root = greenlet.getcurrent()
+        self._g_mainloop = greenlet.greenlet(self.gameloop)
+        self._waiting_event = None
 
-    def process_control(self):
-        print 'Player acts. Waiting for input...'
-        sym, mod = wait_key()
+    def _add_monsters(self):
+        for room in self.level.rooms:
+            for i in xrange(random.randint(0, 5)):
+                x = random.randrange(room.x, room.x + room.size_x)
+                y = random.randrange(room.y, room.y + room.size_y)
 
-        if sym == key.NUM_8:
-            move_hero(0, 1)
-        elif sym == key.NUM_2:
-            move_hero(0, -1)
-        elif sym == key.NUM_4:
-            move_hero(-1, 0)
-        elif sym == key.NUM_6:
-            move_hero(1, 0)
-        elif sym == key.NUM_7:
-            move_hero(-1, 1)
-        elif sym == key.NUM_9:
-            move_hero(1, 1)
-        elif sym == key.NUM_1:
-            move_hero(-1, -1)
-        elif sym == key.NUM_3:
-            move_hero(1, -1)
+                if (x, y) in self.level.objects and self.level.objects[x, y]:
+                    continue
 
-        return ACTION_COST
+                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(monster_tex))
+                monster.blocks_movement = True
+                self.level.add_object(monster, x, y)
 
-objects = [Player()]
+    def _render_level(self):
+        self._level_sprites = {}
+        for y in xrange(self.level.size_y):
+            for x in xrange(self.level.size_x):
+                tile = self.level.get_tile(x, y)
+                if tile == TILE_WALL:
+                    tex = self._get_wall_transition_tile(x, y)
+                    sprite = pyglet.sprite.Sprite(tex, x * 8, y * 8)
+                elif tile == TILE_FLOOR:
+                    sprite = pyglet.sprite.Sprite(floor_tex, x * 8, y * 8)
+                else:
+                    sprite = None
+                self._level_sprites[x, y] = sprite
 
-def processor():
-    global objects
+    def _is_wall(self, x, y):
+        if not self.level.in_bounds(x, y):
+            return True
+        return self.level.get_tile(x, y) in (TILE_WALL, TILE_EMPTY)
 
-    actors = []
-    for object in objects:
-        actors.extend(object.actors)
+    def _get_wall_transition_tile(self, x, y):
+        n = 1
+        e = 2
+        s = 4
+        w = 8
+        nw = 128
+        ne = 16
+        se = 32
+        sw = 64
 
-    time_system = TimeSystem(actors)
+        v = 0
+        if self._is_wall(x, y + 1):
+            v |= n
+        if self._is_wall(x + 1, y):
+            v |= e
+        if self._is_wall(x, y - 1):
+            v |= s
+        if self._is_wall(x - 1, y):
+            v |= w
+        if self._is_wall(x - 1, y + 1):
+            v |= nw
+        if self._is_wall(x + 1, y + 1):
+            v |= ne
+        if self._is_wall(x - 1, y - 1):
+            v |= sw
+        if self._is_wall(x + 1, y - 1):
+            v |= se
 
-    while True:
-        time_system.tick()
+        if v not in WALL_TRANSITION_TILES:
+            v &= 15
 
-g_processor = greenlet.greenlet(processor)
+        return dungeon_tex[wall_tex_row, WALL_TRANSITION_TILES[v]]
 
-@window.event
-def on_draw():
-    window.clear()
-    glPushMatrix()
-    glScalef(ZOOM, ZOOM, 1)
-    batch.draw()
-    draw_tile_objects()
-    glPopMatrix()
+    def gameloop(self):
+        self.level = Level(self, 70, 50)
+        generator = LevelGenerator(self.level)
+        generator.generate()
 
-def wait_key():
-    sym, mod = greenlet.getcurrent().parent.switch()
-    return sym, mod
+        self._render_level()
 
-g_processor.switch()
+        self._add_monsters()
 
-@window.event
-def on_key_press(sym, mod):
-    global ZOOM
-    if sym == key._1:
-        ZOOM = 1
-    elif sym == key._2:
-        ZOOM = 2
-    elif sym == key._3:
-        ZOOM = 3
-    elif sym == key._4:
-        ZOOM = 4
-    else:
-        g_processor.switch(sym, mod)
+        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex))
+        self.player.blocks_movement = True
+        room = random.choice(self.level.rooms)
+        self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
+        self.player.fov.update_light()
 
-pyglet.app.run()
+        while True:
+            self.level.tick()
+
+    def start(self):
+        self._switch_to_gameloop()
+
+    def wait_key_press(self):
+        return self._g_root.switch(Game.EVT_KEY_PRESS)
+
+    def _switch_to_gameloop(self, *data):
+        self._waiting_event = self._g_mainloop.switch(*data)
+
+    def on_draw(self):
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+
+        for x, y in self.player.fov.lightmap:
+            self._level_sprites[x, y].draw()
+
+            sprite = None
+
+            if (x, y) in self.level.objects and len(self.level.objects[x, y]) > 0:
+                for obj in self.level.objects[x, y]:
+                    if hasattr(obj, Renderable.component_name):
+                        sprite = obj.renderable.sprite
+                        break
+
+            if sprite is not None:
+                gl.glPushMatrix()
+                gl.glTranslatef(x * 8, y * 8, 0)
+                sprite.draw()
+                gl.glPopMatrix()
+
+
+    def on_key_press(self, sym, mod):
+        if self._waiting_event == Game.EVT_KEY_PRESS:
+            self._switch_to_gameloop(sym, mod)
+
+
+def player_act(actor):
+    player = actor.owner
+    sym, mod = player.level.game.wait_key_press()
+    if sym == key.NUM_8:
+        player.movement.move(0, 1)
+    elif sym == key.NUM_2:
+        player.movement.move(0, -1)
+    elif sym == key.NUM_4:
+        player.movement.move(-1, 0)
+    elif sym == key.NUM_6:
+        player.movement.move(1, 0)
+    elif sym == key.NUM_7:
+        player.movement.move(-1, 1)
+    elif sym == key.NUM_9:
+        player.movement.move(1, 1)
+    elif sym == key.NUM_1:
+        player.movement.move(-1, -1)
+    elif sym == key.NUM_3:
+        player.movement.move(1, -1)
+    return 100
+
+
+def monster_act(actor):
+    dx = random.randint(-1, 1)
+    dy = random.randint(-1, 1)
+    actor.owner.movement.move(dx, dy)
+    return 100
