@@ -113,6 +113,8 @@ class Game(object):
         self.player.fov.on_fov_updated = self._on_player_fov_updated
         self.player.fov.update_light()
 
+        self._memento = {}
+
         self.zoom = 3
 
         while True:
@@ -133,11 +135,14 @@ class Game(object):
     def _switch_to_gameloop(self, *data):
         self._waiting_event = self._g_mainloop.switch(*data)
 
-    def _on_player_fov_updated(self):
-        for (x, y), intensity in self.player.fov.lightmap.items():
-            sprite = self._level_sprites[x, y]
-            v = int(intensity * 255)
-            sprite.color = (v, v, v)
+    def _on_player_fov_updated(self, old_lightmap):
+        new_lightmap = self.player.fov.lightmap
+        keys = set(old_lightmap).union(new_lightmap)
+
+        for key in keys:
+            intensity = new_lightmap.get(key, 0)
+            v = int((0.3 + intensity * 0.7) * 255)
+            self._level_sprites[key].color = (v, v, v)
 
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
@@ -147,22 +152,41 @@ class Game(object):
         gl.glScalef(self.zoom, self.zoom, 1)
         gl.glTranslatef(400 / self.zoom - self.player.x * 8, 300 / self.zoom - self.player.y * 8, 0)
 
-        for x, y in self.player.fov.lightmap:
-            self._level_sprites[x, y].draw()
+        for x in xrange(self.level.size_x):
+            for y in xrange(self.level.size_y):
 
-            sprite = None
+                if self.player.fov.is_in_fov(x, y):
+                    level_sprite = self._level_sprites[x, y]
+                    level_sprite.draw()
 
-            if (x, y) in self.level.objects and len(self.level.objects[x, y]) > 0:
-                for obj in self.level.objects[x, y]:
-                    if hasattr(obj, Renderable.component_name):
-                        sprite = obj.renderable.sprite
-                        break
+                    renderable = None
+                    objects_memento = []
 
-            if sprite is not None:
-                gl.glPushMatrix()
-                gl.glTranslatef(x * 8, y * 8, 0)
-                sprite.draw()
-                gl.glPopMatrix()
+                    if (x, y) in self.level.objects and len(self.level.objects[x, y]) > 0:
+                        for obj in self.level.objects[x, y]:
+                            if hasattr(obj, Renderable.component_name):
+                                renderable = obj.renderable
+                                break
+
+                    if renderable is not None:
+                        gl.glPushMatrix()
+                        gl.glTranslatef(x * 8, y * 8, 0)
+                        renderable.sprite.draw()
+                        gl.glPopMatrix()
+                        if renderable.save_memento:
+                            objects_memento.append(renderable.get_memento_sprite())
+
+                    self._memento[x, y] = (level_sprite, objects_memento)
+
+                elif (x, y) in self._memento:
+                    level_sprite, object_sprites = self._memento[x, y]
+                    level_sprite.draw()
+
+                    for sprite in object_sprites:
+                        gl.glPushMatrix()
+                        gl.glTranslatef(x * 8, y * 8, 0)
+                        sprite.draw()
+                        gl.glPopMatrix()
 
         gl.glPopMatrix()
 

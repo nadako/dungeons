@@ -163,11 +163,12 @@ class FOV(Component):
         self.lightmap = {}
 
     def update_light(self):
+        old_lightmap = self.lightmap.copy()
         self.lightmap.clear()
         self.lightmap[self.owner.x, self.owner.y] = 1
         caster = ShadowCaster(self.owner.level.blocks_sight, self.set_light)
         caster.calculate_light(self.owner.x, self.owner.y, self.radius)
-        self.on_fov_updated()
+        self.on_fov_updated(old_lightmap)
 
     def set_light(self, x, y, intensity):
         self.lightmap[x, y] = intensity
@@ -202,8 +203,12 @@ class Renderable(Component):
 
     component_name = 'renderable'
 
-    def __init__(self, tex):
+    def __init__(self, tex, save_memento=False):
         self.sprite = pyglet.sprite.Sprite(tex)
+        self.save_memento = save_memento
+
+    def get_memento_sprite(self):
+        return self.sprite
 
 
 class DoorRenderable(Component):
@@ -213,10 +218,14 @@ class DoorRenderable(Component):
     def __init__(self):
         self.open_sprite = pyglet.sprite.Sprite(open_door_tex)
         self.closed_sprite = pyglet.sprite.Sprite(closed_door_tex)
+        self.save_memento = True
 
     @property
     def sprite(self):
         return self.owner.is_open and self.open_sprite or self.closed_sprite
+
+    def get_memento_sprite(self):
+        return self.sprite
 
 
 class Door(LevelObject):
