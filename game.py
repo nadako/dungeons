@@ -110,6 +110,7 @@ class Game(object):
         self.player.order = 1
         room = random.choice(self.level.rooms)
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
+        self.player.fov.on_fov_updated = self._on_player_fov_updated
         self.player.fov.update_light()
 
         self.zoom = 3
@@ -131,6 +132,12 @@ class Game(object):
 
     def _switch_to_gameloop(self, *data):
         self._waiting_event = self._g_mainloop.switch(*data)
+
+    def _on_player_fov_updated(self):
+        for (x, y), intensity in self.player.fov.lightmap.items():
+            sprite = self._level_sprites[x, y]
+            v = int(intensity * 255)
+            sprite.color = (v, v, v)
 
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)

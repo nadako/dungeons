@@ -167,12 +167,16 @@ class FOV(Component):
         self.lightmap[self.owner.x, self.owner.y] = 1
         caster = ShadowCaster(self.owner.level.blocks_sight, self.set_light)
         caster.calculate_light(self.owner.x, self.owner.y, self.radius)
+        self.on_fov_updated()
 
     def set_light(self, x, y, intensity):
         self.lightmap[x, y] = intensity
 
     def is_in_fov(self, x, y):
         return self.lightmap.get((x, y), 0) > 0
+
+    def on_fov_updated(self):
+        pass
 
 
 class Movement(Component):
