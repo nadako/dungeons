@@ -111,6 +111,8 @@ class Game(object):
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
         self.player.fov.update_light()
 
+        self.zoom = 3
+
         while True:
             self.level.tick()
 
@@ -132,6 +134,11 @@ class Game(object):
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
+        gl.glPushMatrix()
+
+        gl.glScalef(self.zoom, self.zoom, 1)
+        gl.glTranslatef(400 / self.zoom - self.player.x * 8, 300 / self.zoom - self.player.y * 8, 0)
+
         for x, y in self.player.fov.lightmap:
             self._level_sprites[x, y].draw()
 
@@ -148,6 +155,8 @@ class Game(object):
                 gl.glTranslatef(x * 8, y * 8, 0)
                 sprite.draw()
                 gl.glPopMatrix()
+
+        gl.glPopMatrix()
 
         self._messages_layout.draw()
 

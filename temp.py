@@ -1,4 +1,5 @@
 # TEMPRORARY global state (to be removed)
+import pyglet
 from util import load_tilegrid
 
 
@@ -11,3 +12,10 @@ floor_tex = dungeon_tex[39, 4]
 player_tex = creature_tex[39, 2]
 monster_tex = creature_tex[22, 1]
 wall_tex_row = 33
+
+# monkey-patch SpriteGroup's set_state method to disable texture smoothing
+_old_set_state = pyglet.sprite.SpriteGroup.set_state
+def set_state(self):
+    _old_set_state(self)
+    pyglet.gl.glTexParameteri(self.texture.target, pyglet.gl.GL_TEXTURE_MAG_FILTER, pyglet.gl.GL_NEAREST)
+pyglet.sprite.SpriteGroup.set_state = set_state
