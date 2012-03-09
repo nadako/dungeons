@@ -1,3 +1,4 @@
+from collections import deque
 import random
 
 import greenlet
@@ -91,6 +92,11 @@ class Game(object):
         return dungeon_tex[wall_tex_row, WALL_TRANSITION_TILES[v]]
 
     def gameloop(self):
+        self._message_log = deque(maxlen=5)
+        self._messages_layout = pyglet.text.layout.TextLayout(pyglet.text.document.UnformattedDocument(), width=800, multiline=True)
+        self._messages_layout.anchor_y = 'top'
+        self._messages_layout.y = 600
+
         self.level = Level(self, 70, 50)
         generator = LevelGenerator(self.level)
         generator.generate()
@@ -114,6 +120,12 @@ class Game(object):
     def wait_key_press(self):
         return self._g_root.switch(Game.EVT_KEY_PRESS)
 
+    def message(self, text, color=(255, 255, 255, 255)):
+        if color:
+            text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
+        self._message_log.append(text)
+        self._messages_layout.document = pyglet.text.decode_attributed('{}\n'.join(self._message_log))
+
     def _switch_to_gameloop(self, *data):
         self._waiting_event = self._g_mainloop.switch(*data)
 
@@ -136,6 +148,8 @@ class Game(object):
                 gl.glTranslatef(x * 8, y * 8, 0)
                 sprite.draw()
                 gl.glPopMatrix()
+
+        self._messages_layout.draw()
 
 
     def on_key_press(self, sym, mod):
