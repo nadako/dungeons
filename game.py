@@ -107,6 +107,7 @@ class Game(object):
 
         self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex))
         self.player.blocks_movement = True
+        self.player.order = 1
         room = random.choice(self.level.rooms)
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
         self.player.fov.update_light()

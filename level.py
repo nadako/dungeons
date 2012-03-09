@@ -1,3 +1,4 @@
+from heapq import heappush
 from collections import defaultdict, deque
 
 import pyglet
@@ -11,6 +12,7 @@ class LevelObject(object):
 
     blocks_sight = False
     blocks_movement = False
+    order = 0
 
     def __init__(self, *components):
         self.x = None
@@ -36,6 +38,11 @@ class LevelObject(object):
 
     def bump(self, who):
         pass
+
+    def __lt__(self, other):
+        if isinstance(other, LevelObject):
+            return self.order > other.order
+        return True
 
 
 class Level(object):
@@ -92,7 +99,7 @@ class Level(object):
         return x >= 0 and x < self.size_x and y >= 0 and y < self.size_y
 
     def add_object(self, obj, x, y):
-        self.objects[x, y].append(obj)
+        heappush(self.objects[x, y], obj)
         obj.x = x
         obj.y = y
         obj.level = self
@@ -113,7 +120,7 @@ class Level(object):
 
     def move_object(self, obj, x, y):
         self.objects[obj.x, obj.y].remove(obj)
-        self.objects[x, y].append(obj)
+        heappush(self.objects[x, y], obj)
         obj.x = x
         obj.y = y
 
