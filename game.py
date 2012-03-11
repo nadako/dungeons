@@ -7,8 +7,8 @@ from pyglet.window import key
 from pyglet import gl
 
 from level import Level, LevelObject, Actor, Movement, Renderable, FOV
-from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
-from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex
+from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR, DIR_E, DIR_W, DIR_S, DIR_N
+from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex, light_tex, fountain_tex, library_texes
 
 from data.eight2empire import WALL_TRANSITION_TILES # load this dynamically, not import as python module
 
@@ -26,11 +26,38 @@ class Game(object):
         self._g_mainloop = greenlet.greenlet(self.gameloop)
         self._waiting_event = None
 
+    def _add_features(self):
+        # TODO: check map boundaries, also factor this out into feature generator
+        for room in self.level.rooms:
+            feature = random.choice([None, 'light', 'fountain', 'library'])
+            if feature == 'light':
+                coords = random.sample([
+                    (room.x + 1, room.y + 1),
+                    (room.x + room.size_x - 2, room.y + 1),
+                    (room.x + 1, room.y + room.size_y - 2),
+                    (room.x + room.size_x - 2, room.y + room.size_y - 2),
+                ], random.randint(1, 4))
+                for x, y in coords:
+                    light = LevelObject(Renderable(light_tex, True))
+                    light.blocks_movement = True
+                    self.level.add_object(light, x, y)
+            elif feature == 'fountain':
+                fountain = LevelObject(Renderable(fountain_tex, True))
+                fountain.blocks_movement = True
+                self.level.add_object(fountain, room.x + room.size_x / 2, room.y + room.size_y / 2)
+            elif feature == 'library':
+                for x in xrange(room.x + 1, room.x + room.size_x - 1):
+                    if self.level.get_tile(x, room.y + room.size_y) != TILE_WALL:
+                        continue
+                    shelf = LevelObject(Renderable(random.choice(library_texes)))
+                    shelf.blocks_movement = True
+                    self.level.add_object(shelf, x, room.y + room.size_y - 2)
+
     def _add_monsters(self):
         for room in self.level.rooms:
-            for i in xrange(random.randint(0, 5)):
-                x = random.randrange(room.x, room.x + room.size_x)
-                y = random.randrange(room.y, room.y + room.size_y)
+            for i in xrange(random.randint(0, 3)):
+                x = random.randrange(room.x + 1, room.x + room.size_x - 1)
+                y = random.randrange(room.y + 1, room.y + room.size_y - 1)
 
                 if (x, y) in self.level.objects and self.level.objects[x, y]:
                     continue
@@ -103,6 +130,7 @@ class Game(object):
 
         self._render_level()
 
+        self._add_features()
         self._add_monsters()
 
         self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex))
