@@ -21,7 +21,8 @@ class Game(object):
 
     EVT_KEY_PRESS = 'key-press'
 
-    def __init__(self):
+    def __init__(self, window):
+        self.window = window
         self._g_root = greenlet.getcurrent()
         self._g_mainloop = greenlet.greenlet(self.gameloop)
         self._waiting_event = None
@@ -123,7 +124,7 @@ class Game(object):
         self._message_log = deque(maxlen=5)
         self._messages_layout = pyglet.text.layout.TextLayout(pyglet.text.document.UnformattedDocument(), width=800, multiline=True)
         self._messages_layout.anchor_y = 'top'
-        self._messages_layout.y = 600
+        self._messages_layout.y = self.window.height
 
         self.level = Level(self, 70, 50)
         generator = LevelGenerator(self.level)
@@ -150,6 +151,7 @@ class Game(object):
             self.level.tick()
 
     def start(self):
+        self.window.push_handlers(self)
         self._switch_to_gameloop()
 
     def wait_key_press(self):
@@ -202,7 +204,7 @@ class Game(object):
         gl.glPushMatrix()
 
         gl.glScalef(self.zoom, self.zoom, 1)
-        gl.glTranslatef(400 / self.zoom - self.player.x * 8, 300 / self.zoom - self.player.y * 8, 0)
+        gl.glTranslatef(self.window.width / (2 * self.zoom) - self.player.x * 8, self.window.height / (2 * self.zoom) - self.player.y * 8, 0)
 
         for x in xrange(self.level.size_x):
             for y in xrange(self.level.size_y):

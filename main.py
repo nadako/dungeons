@@ -2,10 +2,9 @@ import pyglet
 
 from game import Game
 
-game = Game()
-game.start()
+window = pyglet.window.Window(1024, 768, 'Dungeon')
 
-window = pyglet.window.Window(800, 600, 'Dungeon')
-window.push_handlers(game)
+game = Game(window)
+game.start()
 
 pyglet.app.run()
