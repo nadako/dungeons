@@ -174,12 +174,11 @@ class FOV(Component):
         self.lightmap = {}
 
     def update_light(self):
-        old_lightmap = self.lightmap.copy()
         self.lightmap.clear()
         self.lightmap[self.owner.x, self.owner.y] = 1
         caster = ShadowCaster(self.owner.level.blocks_sight, self.set_light)
         caster.calculate_light(self.owner.x, self.owner.y, self.radius)
-        self.on_fov_updated(old_lightmap)
+        self.on_fov_updated()
 
     def set_light(self, x, y, intensity):
         self.lightmap[x, y] = intensity

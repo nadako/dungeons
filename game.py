@@ -130,6 +130,7 @@ class Game(object):
         generator.generate()
 
         self._render_level()
+        self._create_light_overlay()
 
         self._add_features()
         self._add_monsters()
@@ -163,14 +164,37 @@ class Game(object):
     def _switch_to_gameloop(self, *data):
         self._waiting_event = self._g_mainloop.switch(*data)
 
-    def _on_player_fov_updated(self, old_lightmap):
-        new_lightmap = self.player.fov.lightmap
-        keys = set(old_lightmap).union(new_lightmap)
+    def _create_light_overlay(self):
+        vertices = []
+        colors = []
+        for tile_y in xrange(self.level.size_y):
+            for tile_x in xrange(self.level.size_x):
+                x1 = tile_x * 8
+                x2 = (tile_x + 1) * 8
+                y1 = tile_y * 8
+                y2 = (tile_y + 1) * 8
+                c = (0, 0, 0, 255)
+                vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+                colors.extend((c * 4))
 
-        for key in keys:
-            intensity = new_lightmap.get(key, 0)
-            v = int((0.3 + intensity * 0.7) * 255)
-            self._level_sprites[key].color = (v, v, v)
+        self._light_vlist = pyglet.graphics.vertex_list(self.level.size_x * self.level.size_y * 4,
+            ('v2i', vertices),
+            ('c4B', colors)
+        )
+
+    def _on_player_fov_updated(self):
+        lightmap = self.player.fov.lightmap
+
+        colors = []
+        for tile_y in xrange(self.level.size_y):
+            for tile_x in xrange(self.level.size_x):
+                intensity = lightmap.get((tile_x, tile_y), 0)
+                v = int((1 - (0.3 + intensity * 0.7)) * 255)
+                c = (0, 0, 0, v)
+                colors.extend((c * 4))
+
+        self._light_vlist.colors = colors
+
 
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
@@ -215,6 +239,10 @@ class Game(object):
                         gl.glTranslatef(x * 8, y * 8, 0)
                         sprite.draw()
                         gl.glPopMatrix()
+
+        pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
+        pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
+        self._light_vlist.draw(pyglet.gl.GL_QUADS)
 
         gl.glPopMatrix()
 
