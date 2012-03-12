@@ -1,4 +1,4 @@
-from heapq import heappush
+from bisect import insort_right
 from collections import defaultdict, deque
 
 import pyglet
@@ -10,8 +10,6 @@ from shadowcaster import ShadowCaster
 
 class LevelObject(object):
 
-    blocks_sight = False
-    blocks_movement = False
     order = 0
 
     def __init__(self, *components):
@@ -35,9 +33,6 @@ class LevelObject(object):
             assert isinstance(component, Component)
             delattr(self, name)
             component.owner = None
-
-    def bump(self, who):
-        pass
 
     def __lt__(self, other):
         if isinstance(other, LevelObject):
@@ -65,7 +60,7 @@ class Level(object):
 
         if (x, y) in self.objects:
             for object in self.objects[x, y]:
-                if object.blocks_sight:
+                if hasattr(object, 'blocker') and object.blocker.blocks_sight:
                     return object
 
         return False
@@ -79,7 +74,7 @@ class Level(object):
 
         if (x, y) in self.objects:
             for object in self.objects[x, y]:
-                if object.blocks_movement:
+                if hasattr(object, 'blocker') and object.blocker.blocks_movement:
                     return object
 
         return False
@@ -99,7 +94,7 @@ class Level(object):
         return x >= 0 and x < self.size_x and y >= 0 and y < self.size_y
 
     def add_object(self, obj, x, y):
-        heappush(self.objects[x, y], obj)
+        insort_right(self.objects[x, y], obj)
         obj.x = x
         obj.y = y
         obj.level = self
@@ -120,7 +115,7 @@ class Level(object):
 
     def move_object(self, obj, x, y):
         self.objects[obj.x, obj.y].remove(obj)
-        heappush(self.objects[x, y], obj)
+        insort_right(self.objects[x, y], obj)
         obj.x = x
         obj.y = y
 
@@ -137,6 +132,21 @@ class Component(object):
 
     component_name = None
     owner = None
+
+
+class Blocker(Component):
+
+    component_name = 'blocker'
+
+    def __init__(self, blocks_sight=False, blocks_movement=False, bump_function=None):
+        self.blocks_sight = blocks_sight
+        self.blocks_movement = blocks_movement
+        if bump_function:
+            self.bump = bump_function
+
+    @staticmethod
+    def bump(blocker, who):
+        pass
 
 
 class Actor(Component):
@@ -192,7 +202,7 @@ class Movement(Component):
         if not blocker:
             self.owner.level.move_object(self.owner, new_x, new_y)
         elif isinstance(blocker, LevelObject):
-            blocker.bump(self.owner)
+            blocker.blocker.bump(blocker.blocker, self.owner)
 
         # TODO: use some kind of events/signals
         if hasattr(self.owner, 'fov'):
@@ -232,15 +242,10 @@ class Door(LevelObject):
 
     def __init__(self, is_open):
         self.is_open = is_open
-        super(Door, self).__init__(DoorRenderable())
+        super(Door, self).__init__(DoorRenderable(), Blocker(not is_open, not is_open, self.bump))
 
-    @property
-    def blocks_sight(self):
-        return not self.is_open
-
-    @property
-    def blocks_movement(self):
-        return not self.is_open
-
-    def bump(self, who):
+    def bump(self, blocker, who):
+        assert blocker.owner is self
         self.is_open = not self.is_open
+        self.blocker.blocks_sight = not self.is_open
+        self.blocker.blocks_movement = not self.is_open

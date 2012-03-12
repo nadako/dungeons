@@ -6,7 +6,7 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
-from level import Level, LevelObject, Actor, Movement, Renderable, FOV
+from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
 from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex, light_tex, fountain_tex, library_texes
 
@@ -38,19 +38,16 @@ class Game(object):
                     (room.x + room.size_x - 2, room.y + room.size_y - 2),
                 ], random.randint(1, 4))
                 for x, y in coords:
-                    light = LevelObject(Renderable(light_tex, True))
-                    light.blocks_movement = True
+                    light = LevelObject(Renderable(light_tex, True), Blocker(blocks_movement=True))
                     self.level.add_object(light, x, y)
             elif feature == 'fountain':
-                fountain = LevelObject(Renderable(fountain_tex, True))
-                fountain.blocks_movement = True
+                fountain = LevelObject(Renderable(fountain_tex, True), Blocker(blocks_movement=True))
                 self.level.add_object(fountain, room.x + room.size_x / 2, room.y + room.size_y / 2)
             elif feature == 'library':
                 for x in xrange(room.x + 1, room.x + room.size_x - 1):
                     if self.level.get_tile(x, room.y + room.size_y) != TILE_WALL:
                         continue
-                    shelf = LevelObject(Renderable(random.choice(library_texes)))
-                    shelf.blocks_movement = True
+                    shelf = LevelObject(Renderable(random.choice(library_texes)), Blocker(False, True))
                     self.level.add_object(shelf, x, room.y + room.size_y - 2)
 
     def _add_monsters(self):
@@ -62,8 +59,7 @@ class Game(object):
                 if (x, y) in self.level.objects and self.level.objects[x, y]:
                     continue
 
-                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(monster_tex))
-                monster.blocks_movement = True
+                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(monster_tex), Blocker(blocks_movement=True))
                 self.level.add_object(monster, x, y)
 
     def _render_level(self):
@@ -133,8 +129,7 @@ class Game(object):
         self._add_features()
         self._add_monsters()
 
-        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex))
-        self.player.blocks_movement = True
+        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex), Blocker(blocks_movement=True))
         self.player.order = 1
         room = random.choice(self.level.rooms)
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
