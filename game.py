@@ -122,7 +122,7 @@ class Game(object):
 
     def gameloop(self):
         self._message_log = deque(maxlen=5)
-        self._messages_layout = pyglet.text.layout.TextLayout(pyglet.text.document.UnformattedDocument(), width=800, multiline=True)
+        self._messages_layout = pyglet.text.layout.TextLayout(pyglet.text.document.UnformattedDocument(), width=self.window.width, multiline=True)
         self._messages_layout.anchor_y = 'top'
         self._messages_layout.y = self.window.height
 
