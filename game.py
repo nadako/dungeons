@@ -27,7 +27,7 @@ class Game(object):
         self._waiting_event = None
 
     def _add_features(self):
-        # TODO: check map boundaries, also factor this out into feature generator
+        # TODO: factor this out into feature generator
         for room in self.level.rooms:
             feature = random.choice([None, 'light', 'fountain', 'library'])
             if feature == 'light':
@@ -44,11 +44,16 @@ class Game(object):
                 fountain = LevelObject(Renderable(fountain_tex, True), Blocker(blocks_movement=True))
                 self.level.add_object(fountain, room.x + room.size_x / 2, room.y + room.size_y / 2)
             elif feature == 'library':
+                y = room.y + room.size_y - 1
                 for x in xrange(room.x + 1, room.x + room.size_x - 1):
-                    if self.level.get_tile(x, room.y + room.size_y) != TILE_WALL:
+                    if self.level.get_tile(x, y) != TILE_WALL:
                         continue
-                    shelf = LevelObject(Renderable(random.choice(library_texes)), Blocker(False, True))
-                    self.level.add_object(shelf, x, room.y + room.size_y - 2)
+                    if x == room.x + 1 and self.level.get_tile(room.x, y - 1) != TILE_WALL:
+                        continue
+                    if x == room.x + room.size_x - 2 and self.level.get_tile(x + 1, y - 1) != TILE_WALL:
+                        continue
+                    shelf = LevelObject(Renderable(random.choice(library_texes), True), Blocker(False, True))
+                    self.level.add_object(shelf, x, y - 1)
 
     def _add_monsters(self):
         for room in self.level.rooms:
