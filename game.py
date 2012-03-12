@@ -6,7 +6,7 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
-from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player
+from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player, Fighter
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
 from message import MessageLog, LastMessagesView
 from temp import monster_texes, dungeon_tex, wall_tex_row, floor_tex, player_tex, library_texes, light_anim, fountain_anim
@@ -68,7 +68,7 @@ class Game(object):
                 if (x, y) in self.level.objects and self.level.objects[x, y]:
                     continue
 
-                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(random.choice(monster_texes)), Blocker(blocks_movement=True))
+                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(random.choice(monster_texes)), Blocker(blocks_movement=True, bump_function=monster_bump), Fighter(2, 1, 0))
                 self.level.add_object(monster, x, y)
 
     def _render_level(self):
@@ -137,7 +137,7 @@ class Game(object):
         self._add_features()
         self._add_monsters()
 
-        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex), Blocker(blocks_movement=True), Player())
+        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex), Blocker(blocks_movement=True), Player(), Fighter(100, 1, 0))
         self.player.order = 1
         room = random.choice(self.level.rooms)
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
@@ -284,3 +284,13 @@ def monster_act(actor):
     dy = random.randint(-1, 1)
     actor.owner.movement.move(dx, dy)
     return 100
+
+
+def monster_bump(blocker, who):
+    monster = blocker.owner
+    if not hasattr(monster, Fighter.component_name):
+        return
+    if not hasattr(who, Player.component_name) or not hasattr(who, Fighter.component_name):
+        return
+
+    who.fighter.do_attack(monster)

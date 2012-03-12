@@ -1,8 +1,9 @@
 from bisect import insort_right
 from collections import defaultdict, deque
+import random
 
 import pyglet
-from temp import open_door_tex, closed_door_tex
+from temp import open_door_tex, closed_door_tex, corpse_texes
 
 from level_generator import TILE_EMPTY, TILE_WALL, TILE_DOOR_CLOSED, TILE_DOOR_OPEN, TILE_FLOOR
 from shadowcaster import ShadowCaster
@@ -256,3 +257,31 @@ class Door(LevelObject):
         self.is_open = not self.is_open
         self.blocker.blocks_sight = not self.is_open
         self.blocker.blocks_movement = not self.is_open
+
+
+class Fighter(Component):
+
+    component_name = 'fighter'
+
+    def __init__(self, max_health, attack, defense):
+        self.health = self.max_health = max_health
+        self.attack = attack
+        self.defense = defense
+
+    def do_attack(self, target):
+        dmg = max(0, self.attack - target.fighter.defense)
+        target.fighter.take_damage(dmg, self.owner)
+
+    def take_damage(self, damage, source):
+        self.health -= damage
+
+        if hasattr(source, Player.component_name):
+            source.level.game.message('You hit monster for %d hp' % damage)
+        if self.health <= 0:
+            self.die()
+
+    def die(self):
+        self.owner.level.game.message('Monster dies')
+        corpse = LevelObject(Renderable(random.choice(corpse_texes)))
+        self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
+        self.owner.level.remove_object(self.owner)
