@@ -2,6 +2,8 @@
 import pyglet
 from util import load_tilegrid
 
+pyglet.font.add_file('data/font.ttf')
+pyglet.font.load('eight2empire')
 
 dungeon_tex = load_tilegrid('data/dungeon.png')
 creature_tex = load_tilegrid('data/creatures.png')

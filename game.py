@@ -158,7 +158,7 @@ class Game(object):
         if color:
             text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
         self._message_log.append(text)
-        self._messages_layout.document = pyglet.text.decode_attributed('{}\n'.join(self._message_log))
+        self._messages_layout.document = pyglet.text.decode_attributed('{font_name "eight2empire"}' + '{}\n'.join(self._message_log))
 
     def _switch_to_gameloop(self, *data):
         self._waiting_event = self._g_mainloop.switch(*data)
