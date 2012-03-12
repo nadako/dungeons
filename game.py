@@ -20,6 +20,8 @@ class GameExit(Exception):
 class Game(object):
 
     EVT_KEY_PRESS = 'key-press'
+    DUNGEON_SIZE_X = 100
+    DUNGEON_SIZE_Y = 100
 
     def __init__(self, window):
         self.window = window
@@ -126,7 +128,7 @@ class Game(object):
         self._messages_layout.anchor_y = 'top'
         self._messages_layout.y = self.window.height
 
-        self.level = Level(self, 70, 50)
+        self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
         generator = LevelGenerator(self.level)
         generator.generate()
 
