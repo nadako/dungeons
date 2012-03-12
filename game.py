@@ -8,6 +8,7 @@ from pyglet import gl
 
 from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
+from message import MessageLog, LastMessagesView
 from temp import monster_texes, dungeon_tex, wall_tex_row, floor_tex, player_tex, library_texes, light_anim, fountain_anim
 
 from data.eight2empire import WALL_TRANSITION_TILES # load this dynamically, not import as python module
@@ -123,10 +124,8 @@ class Game(object):
         return dungeon_tex[wall_tex_row, WALL_TRANSITION_TILES[v]]
 
     def gameloop(self):
-        self._message_log = deque(maxlen=5)
-        self._messages_layout = pyglet.text.layout.TextLayout(pyglet.text.document.UnformattedDocument(), width=self.window.width, multiline=True)
-        self._messages_layout.anchor_y = 'top'
-        self._messages_layout.y = self.window.height
+        self._message_log = MessageLog()
+        self._last_messages_view = LastMessagesView(self._message_log, self.window.width, self.window.height)
 
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
         generator = LevelGenerator(self.level)
@@ -162,8 +161,7 @@ class Game(object):
     def message(self, text, color=(255, 255, 255, 255)):
         if color:
             text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
-        self._message_log.append(text)
-        self._messages_layout.document = pyglet.text.decode_attributed('{font_name "eight2empire"}' + '{}\n'.join(self._message_log))
+        self._message_log.add_message(text)
 
     def _switch_to_gameloop(self, *data):
         self._waiting_event = self._g_mainloop.switch(*data)
@@ -250,7 +248,7 @@ class Game(object):
 
         gl.glPopMatrix()
 
-        self._messages_layout.draw()
+        self._last_messages_view.draw()
 
 
     def on_key_press(self, sym, mod):
@@ -261,6 +259,7 @@ class Game(object):
 def player_act(actor):
     player = actor.owner
     sym, mod = player.level.game.wait_key_press()
+    player.level.game._message_log.mark_as_seen()
     if sym == key.NUM_8:
         player.movement.move(0, 1)
     elif sym == key.NUM_2:

@@ -1,4 +1,4 @@
-In message log, mark last turn's messages with a marker, unmark on next turn.
+(done!) In message log, mark last turn's messages with a marker, unmark on next turn.
 
 Create DOTA/HoN-based roguelike, where you develop your own hero and can take
 up to like 4 skills (one of which is ultimate one), you can find artifacts and
