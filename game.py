@@ -6,7 +6,7 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
-from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player, Fighter
+from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player, Fighter, Description
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
 from message import MessageLog, LastMessagesView
 from temp import monster_texes, dungeon_tex, wall_tex_row, floor_tex, player_tex, library_texes, light_anim, fountain_anim
@@ -68,7 +68,7 @@ class Game(object):
                 if (x, y) in self.level.objects and self.level.objects[x, y]:
                     continue
 
-                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(random.choice(monster_texes)), Blocker(blocks_movement=True, bump_function=monster_bump), Fighter(2, 1, 0))
+                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(random.choice(monster_texes)), Blocker(blocks_movement=True, bump_function=monster_bump), Fighter(2, 1, 0), Description('Goblin'))
                 self.level.add_object(monster, x, y)
 
     def _render_level(self):

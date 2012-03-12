@@ -35,6 +35,12 @@ class LevelObject(object):
             delattr(self, name)
             component.owner = None
 
+    @property
+    def name(self):
+        if hasattr(self, Description.component_name):
+            return self.description.name
+        return 'Something'
+
     def __lt__(self, other):
         if isinstance(other, LevelObject):
             return self.order > other.order
@@ -276,12 +282,21 @@ class Fighter(Component):
         self.health -= damage
 
         if hasattr(source, Player.component_name):
-            source.level.game.message('You hit monster for %d hp' % damage)
+            source.level.game.message('You hit %s for %d hp' % (self.owner.name, damage))
         if self.health <= 0:
             self.die()
 
     def die(self):
-        self.owner.level.game.message('Monster dies')
+        self.owner.level.game.message('%s dies' % self.owner.name)
         corpse = LevelObject(Renderable(random.choice(corpse_texes)))
         self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
         self.owner.level.remove_object(self.owner)
+
+
+class Description(Component):
+
+    component_name = 'description'
+
+    def __init__(self, name):
+        self.name = name
+
