@@ -12,7 +12,7 @@ closed_door_tex = dungeon_tex[9, 3]
 open_door_tex = dungeon_tex[8, 3]
 floor_tex = dungeon_tex[39, 4]
 player_tex = creature_tex[39, 2]
-monster_tex = creature_tex[22, 1]
+monster_texes = [creature_tex[22, i] for i in xrange(10)]
 wall_tex_row = 33
 
 fountain_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 15:11 * dungeon_tex.columns + 17], 0.5)
