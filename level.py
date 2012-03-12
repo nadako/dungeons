@@ -146,7 +146,8 @@ class Blocker(Component):
 
     @staticmethod
     def bump(blocker, who):
-        pass
+        if hasattr(who, 'player'):
+            who.level.game.message('You bump into %r' % blocker.owner)
 
 
 class Actor(Component):
@@ -209,6 +210,11 @@ class Movement(Component):
             self.owner.fov.update_light()
 
 
+class Player(Component):
+
+    component_name = 'player'
+
+
 class Renderable(Component):
 
     component_name = 'renderable'
@@ -246,6 +252,8 @@ class Door(LevelObject):
 
     def bump(self, blocker, who):
         assert blocker.owner is self
+        if hasattr(who, 'player'):
+            self.level.game.message('You open the door')
         self.is_open = not self.is_open
         self.blocker.blocks_sight = not self.is_open
         self.blocker.blocks_movement = not self.is_open

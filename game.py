@@ -6,7 +6,7 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
-from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker
+from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
 from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex, light_tex, fountain_tex, library_texes
 
@@ -129,7 +129,7 @@ class Game(object):
         self._add_features()
         self._add_monsters()
 
-        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex), Blocker(blocks_movement=True))
+        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex), Blocker(blocks_movement=True), Player())
         self.player.order = 1
         room = random.choice(self.level.rooms)
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
