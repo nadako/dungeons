@@ -15,8 +15,8 @@ player_tex = creature_tex[39, 2]
 monster_tex = creature_tex[22, 1]
 wall_tex_row = 33
 
-fountain_tex = dungeon_tex[11, 15]
-light_tex = dungeon_tex[11, 17]
+fountain_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 15:11 * dungeon_tex.columns + 17], 0.5)
+light_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 17:11 * dungeon_tex.columns + 19], 0.5)
 library_texes = [dungeon_tex[17, 14 + i] for i in xrange(6)]
 
 # monkey-patch SpriteGroup's set_state method to disable texture smoothing

@@ -8,7 +8,7 @@ from pyglet import gl
 
 from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
-from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex, light_tex, fountain_tex, library_texes
+from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex, library_texes, light_anim, fountain_anim
 
 from data.eight2empire import WALL_TRANSITION_TILES # load this dynamically, not import as python module
 
@@ -38,10 +38,10 @@ class Game(object):
                     (room.x + room.size_x - 2, room.y + room.size_y - 2),
                 ], random.randint(1, 4))
                 for x, y in coords:
-                    light = LevelObject(Renderable(light_tex, True), Blocker(blocks_movement=True))
+                    light = LevelObject(Renderable(light_anim, True), Blocker(blocks_movement=True))
                     self.level.add_object(light, x, y)
             elif feature == 'fountain':
-                fountain = LevelObject(Renderable(fountain_tex, True), Blocker(blocks_movement=True))
+                fountain = LevelObject(Renderable(fountain_anim, True), Blocker(blocks_movement=True))
                 self.level.add_object(fountain, room.x + room.size_x / 2, room.y + room.size_y / 2)
             elif feature == 'library':
                 y = room.y + room.size_y - 1
