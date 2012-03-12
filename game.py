@@ -7,7 +7,7 @@ from pyglet.window import key
 from pyglet import gl
 
 from level import Level, LevelObject, Actor, Movement, Renderable, FOV
-from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR, DIR_E, DIR_W, DIR_S, DIR_N
+from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
 from temp import monster_tex, dungeon_tex, wall_tex_row, floor_tex, player_tex, light_tex, fountain_tex, library_texes
 
 from data.eight2empire import WALL_TRANSITION_TILES # load this dynamically, not import as python module
