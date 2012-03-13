@@ -113,22 +113,17 @@ class Game(object):
                     level_sprite = self._level_sprites[x, y]
                     level_sprite.draw()
 
-                    renderable = None
                     objects_memento = []
 
                     if (x, y) in self.level.objects and len(self.level.objects[x, y]) > 0:
                         for obj in self.level.objects[x, y]:
                             if obj.has_component(Renderable):
-                                renderable = obj.renderable
-                                break
-
-                    if renderable is not None:
-                        gl.glPushMatrix()
-                        gl.glTranslatef(x * 8, y * 8, 0)
-                        renderable.sprite.draw()
-                        gl.glPopMatrix()
-                        if renderable.save_memento:
-                            objects_memento.append(renderable.get_memento_sprite())
+                                gl.glPushMatrix()
+                                gl.glTranslatef(x * 8, y * 8, 0)
+                                obj.renderable.sprite.draw()
+                                gl.glPopMatrix()
+                                if obj.renderable.save_memento:
+                                    objects_memento.append(obj.renderable.get_memento_sprite())
 
                     self._memento[x, y] = (level_sprite, objects_memento)
 

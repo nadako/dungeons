@@ -1,11 +1,11 @@
 class LevelObject(object):
 
-    ORDER_PLAYER = 0
-    ORDER_CREATURES = 10
-    ORDER_ITEMS = 20
-    ORDER_FEATURES = 30
-    ORDER_WALLS = 40
-    ORDER_FLOOR = 50
+    ORDER_FLOOR = 0
+    ORDER_WALLS = 10
+    ORDER_FEATURES = 20
+    ORDER_ITEMS = 30
+    ORDER_CREATURES = 40
+    ORDER_PLAYER = 50
 
     order = ORDER_FLOOR
 

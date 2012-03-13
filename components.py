@@ -126,5 +126,6 @@ class Fighter(level_object.Component):
         else:
             self.owner.level.game.message('%s dies' % self.owner.name)
             corpse = level_object.LevelObject(Renderable(random.choice(corpse_texes)))
+            corpse.order = level_object.LevelObject.ORDER_FLOOR + 1
             self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
             self.owner.level.remove_object(self.owner)
