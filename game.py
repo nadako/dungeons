@@ -8,6 +8,7 @@ from pyglet import gl
 
 from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player, Fighter, Description
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
+from light import LightOverlay
 from message import MessageLog, LastMessagesView
 from temp import monster_texes, get_wall_tex, floor_tex, player_tex, library_texes, light_anim, fountain_anim
 
@@ -130,7 +131,7 @@ class Game(object):
         generator.generate()
 
         self._render_level()
-        self._create_light_overlay()
+        self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
 
         self._add_features()
         self._add_monsters()
@@ -161,37 +162,8 @@ class Game(object):
             text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
         self._message_log.add_message(text)
 
-    def _create_light_overlay(self):
-        vertices = []
-        colors = []
-        for tile_y in xrange(self.level.size_y):
-            for tile_x in xrange(self.level.size_x):
-                x1 = tile_x * 8
-                x2 = (tile_x + 1) * 8
-                y1 = tile_y * 8
-                y2 = (tile_y + 1) * 8
-                c = (0, 0, 0, 255)
-                vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
-                colors.extend((c * 4))
-
-        self._light_vlist = pyglet.graphics.vertex_list(self.level.size_x * self.level.size_y * 4,
-            ('v2i', vertices),
-            ('c4B', colors)
-        )
-
     def _on_player_fov_updated(self):
-        lightmap = self.player.fov.lightmap
-
-        colors = []
-        for tile_y in xrange(self.level.size_y):
-            for tile_x in xrange(self.level.size_x):
-                intensity = lightmap.get((tile_x, tile_y), 0)
-                v = int((1 - (0.3 + intensity * 0.7)) * 255)
-                c = (0, 0, 0, v)
-                colors.extend((c * 4))
-
-        self._light_vlist.colors = colors
-
+        self._light_overlay.update_light(self.player.fov.lightmap)
 
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
@@ -239,7 +211,7 @@ class Game(object):
 
         pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
         pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
-        self._light_vlist.draw(pyglet.gl.GL_QUADS)
+        self._light_overlay.draw()
 
         gl.glPopMatrix()
 
