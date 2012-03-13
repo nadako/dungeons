@@ -129,6 +129,41 @@ class LevelGenerator(object):
                 self.place_room(room, room_x, room_y)
                 self.connect_rooms(x, y, dir)
 
+    def get_wall_transition(self, x, y):
+        n = 1
+        e = 2
+        s = 4
+        w = 8
+        nw = 128
+        ne = 16
+        se = 32
+        sw = 64
+
+        def is_wall(x, y):
+            if not self.level.in_bounds(x, y):
+                return True
+            return self.level.get_tile(x, y) in (TILE_WALL, TILE_EMPTY)
+
+        v = 0
+        if is_wall(x, y + 1):
+            v |= n
+        if is_wall(x + 1, y):
+            v |= e
+        if is_wall(x, y - 1):
+            v |= s
+        if is_wall(x - 1, y):
+            v |= w
+        if is_wall(x - 1, y + 1):
+            v |= nw
+        if is_wall(x + 1, y + 1):
+            v |= ne
+        if is_wall(x - 1, y - 1):
+            v |= sw
+        if is_wall(x + 1, y - 1):
+            v |= se
+
+        return v
+
 
 class Room(object):
 

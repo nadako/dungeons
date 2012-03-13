@@ -74,54 +74,19 @@ class Game(object):
                 monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(random.choice(monster_texes)), Blocker(blocks_movement=True, bump_function=monster_bump), Fighter(2, 1, 0), Description('Goblin'))
                 self.level.add_object(monster, x, y)
 
-    def _render_level(self):
+    def _render_level(self, generator):
         self._level_sprites = {}
         for y in xrange(self.level.size_y):
             for x in xrange(self.level.size_x):
                 tile = self.level.get_tile(x, y)
                 if tile == TILE_WALL:
-                    tex = get_wall_tex(self._get_wall_transition(x, y))
+                    tex = get_wall_tex(generator.get_wall_transition(x, y))
                     sprite = pyglet.sprite.Sprite(tex, x * 8, y * 8)
                 elif tile == TILE_FLOOR:
                     sprite = pyglet.sprite.Sprite(floor_tex, x * 8, y * 8)
                 else:
                     sprite = None
                 self._level_sprites[x, y] = sprite
-
-    def _is_wall(self, x, y):
-        if not self.level.in_bounds(x, y):
-            return True
-        return self.level.get_tile(x, y) in (TILE_WALL, TILE_EMPTY)
-
-    def _get_wall_transition(self, x, y):
-        n = 1
-        e = 2
-        s = 4
-        w = 8
-        nw = 128
-        ne = 16
-        se = 32
-        sw = 64
-
-        v = 0
-        if self._is_wall(x, y + 1):
-            v |= n
-        if self._is_wall(x + 1, y):
-            v |= e
-        if self._is_wall(x, y - 1):
-            v |= s
-        if self._is_wall(x - 1, y):
-            v |= w
-        if self._is_wall(x - 1, y + 1):
-            v |= nw
-        if self._is_wall(x + 1, y + 1):
-            v |= ne
-        if self._is_wall(x - 1, y - 1):
-            v |= sw
-        if self._is_wall(x + 1, y - 1):
-            v |= se
-
-        return v
 
     def gameloop(self):
         self._message_log = MessageLog()
@@ -131,7 +96,7 @@ class Game(object):
         generator = LevelGenerator(self.level)
         generator.generate()
 
-        self._render_level()
+        self._render_level(generator)
         self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
 
         self._add_features()
