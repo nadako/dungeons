@@ -3,6 +3,7 @@ import random
 import level_object
 import components
 import player
+from actor import Actor, MoveAction, AttackAction, WaitAction
 from temp import monster_texes
 from util import calc_distance
 
@@ -17,7 +18,7 @@ class InFOV(object):
 
 def create_random_monster():
     monster = level_object.LevelObject(
-        components.Actor(100, monster_act),
+        Actor(80, monster_act),
         components.Movement(),
         components.Renderable(random.choice(monster_texes)),
         components.Blocker(blocks_movement=True, bump_function=monster_bump),
@@ -35,13 +36,13 @@ def monster_act(actor):
         player = monster.level.game.player
         distance = calc_distance(monster.x, monster.y, player.x, player.y)
         if distance < 2:
-            monster.fighter.do_attack(player)
+            return AttackAction(player)
         else:
             dx = int(round((player.x - monster.x) / distance))
             dy = int(round((player.y - monster.y) / distance))
-            monster.movement.move(dx, dy)
-    return 100
+            return MoveAction(dx, dy)
 
+    return WaitAction()
 
 def monster_bump(blocker, who):
     monster = blocker.owner

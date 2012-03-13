@@ -2,7 +2,8 @@ from bisect import insort_right
 from collections import defaultdict, deque
 import random
 
-from components import Blocker, Actor, Renderable
+from actor import Actor
+from components import Blocker, Renderable
 from door import Door
 from generator import LayoutGenerator
 from level_object import LevelObject, Description
@@ -138,4 +139,6 @@ class Level(object):
             self.actors.rotate()
             actor.energy += actor.speed
             while actor.energy > 0:
-                actor.energy -= actor.act()
+                action = actor.act()
+                actor.energy -= action.cost
+                action.do(actor.owner)

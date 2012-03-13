@@ -1,3 +1,5 @@
+from actor import Actor, MoveAction, PickupAction, WaitAction
+from inventory import Inventory
 import level_object
 import components
 
@@ -13,12 +15,13 @@ class Player(level_object.Component):
 def create_player():
     player = level_object.LevelObject(
         Player(),
-        components.Actor(100, player_act),
+        Actor(100, player_act),
         components.FOV(10),
         components.Movement(),
         components.Renderable(player_tex),
         components.Blocker(blocks_movement=True),
         components.Fighter(100, 1, 0),
+        Inventory(),
     )
     player.order = level_object.LevelObject.ORDER_PLAYER
     return player
@@ -27,7 +30,12 @@ def create_player():
 def player_act(actor):
     player = actor.owner
     command = player.level.game.get_command()
+
     player.level.game._message_log.mark_as_seen()
+
     if command.name == Command.MOVE:
-        player.movement.move(*command.data)
-    return 100
+        return MoveAction(*command.data)
+    elif command.name == Command.PICKUP:
+        return PickupAction()
+
+    return WaitAction()

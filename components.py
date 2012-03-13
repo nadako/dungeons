@@ -24,21 +24,6 @@ class Blocker(level_object.Component):
             who.level.game.message('You bump into %s' % blocker.owner.name)
 
 
-class Actor(level_object.Component):
-
-    component_name = 'actor'
-
-    def __init__(self, speed, act=None):
-        self.energy = 0
-        self.speed = speed
-        self._act = act
-
-    def act(self):
-        if self._act is None:
-            raise NotImplementedError()
-        return self._act(self)
-
-
 class FOV(level_object.Component):
 
     component_name = 'fov'
@@ -125,7 +110,8 @@ class Fighter(level_object.Component):
             raise game.GameExit()
         else:
             self.owner.level.game.message('%s dies' % self.owner.name)
-            corpse = level_object.LevelObject(Renderable(random.choice(corpse_texes)))
+            name = '%s\'s corpse' % self.owner.name
+            corpse = level_object.LevelObject(Renderable(random.choice(corpse_texes)), level_object.Description(name))
             corpse.order = level_object.LevelObject.ORDER_FLOOR + 1
             self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
             self.owner.level.remove_object(self.owner)

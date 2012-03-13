@@ -72,7 +72,8 @@ class Game(object):
 
     def _update_player_status(self):
         fighter = self.player.fighter
-        text = 'HP: %d/%d, ATK: %d, DEF: %d' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense)
+        inventory = ', '.join(item.name for item in self.player.inventory.items) or 'nothing'
+        text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
 
     def _on_player_fov_update(self, old_lightmap, new_lightmap):
@@ -169,6 +170,8 @@ class Game(object):
             command = Command(Command.MOVE, (1, -1))
         elif sym == key.NUM_5:
             command = Command(Command.WAIT, None)
+        elif sym == key.G:
+            command = Command(Command.PICKUP, None)
 
         if command is not None:
             self._g_mainloop.switch(command)
