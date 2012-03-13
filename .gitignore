@@ -1,6 +1,2 @@
 .idea
-build
-dist
-*.pyc
-.ropeproject
-*.sublime-*
+*.py[oc]
