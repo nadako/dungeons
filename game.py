@@ -18,6 +18,7 @@ class GameExit(Exception):
 
 
 Command = collections.namedtuple('Command', 'name data')
+Command.WAIT = 'wait'
 Command.MOVE = 'move'
 
 
@@ -238,6 +239,8 @@ class Game(object):
             command = Command(Command.MOVE, (-1, -1))
         elif sym == key.NUM_3:
             command = Command(Command.MOVE, (1, -1))
+        elif sym == key.NUM_5:
+            command = Command(Command.WAIT, None)
 
         if command is not None:
             self._g_mainloop.switch(command)
