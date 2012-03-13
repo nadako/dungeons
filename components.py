@@ -101,6 +101,8 @@ class Fighter(level_object.Component):
         elif self.owner.has_component(player.Player):
             self.owner.level.game.message('%s hits you for %d hp' % (source.name, damage))
 
+        self.owner.level.game.animate_damage(self.owner.x, self.owner.y, damage)
+
         if self.health <= 0:
             self.die()
 

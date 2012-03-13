@@ -1,3 +1,4 @@
+import functools
 import random
 
 import greenlet
@@ -12,6 +13,7 @@ from level import Level
 from components import Renderable
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
+from render import Animation
 from temp import get_wall_tex, floor_tex
 from generator import LayoutGenerator
 
@@ -47,6 +49,8 @@ class Game(object):
                 self._level_sprites[x, y] = sprite
 
     def gameloop(self):
+        self._text_overlay_batch = pyglet.graphics.Batch()
+
         self._message_log = MessageLog()
         self._last_messages_view = LastMessagesView(self._message_log, self.window.width, self.window.height)
 
@@ -144,6 +148,11 @@ class Game(object):
 
         gl.glPopMatrix()
 
+        gl.glPushMatrix()
+        gl.glTranslatef(self.window.width / 2 - self.player.x * 8 * self.ZOOM, self.window.height / 2 - self.player.y * 8 * self.ZOOM, 0)
+        self._text_overlay_batch.draw()
+        gl.glPopMatrix()
+
         self._last_messages_view.draw()
         self._player_status.draw()
         self._fpsdisplay.draw()
@@ -175,3 +184,22 @@ class Game(object):
 
         if command is not None:
             self._g_mainloop.switch(command)
+
+
+    def animate_damage(self, x, y, dmg):
+        # hacky hack
+        x = (x * 8 + 4) * self.ZOOM
+        start_y = (y * 8 + 4) * self.ZOOM
+
+        label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
+                                  x=x, y=start_y, anchor_x='center', anchor_y='center',
+                                  batch=self._text_overlay_batch)
+
+        def update_label(animation):
+            label.y = start_y + 12 * self.ZOOM * animation.anim_time
+            alpha = int((1.0 - animation.anim_time / animation.duration) * 255)
+            label.color = (255, 0, 0, alpha)
+
+        anim = Animation(1)
+        anim.update = functools.partial(update_label, anim)
+        anim.finish = label.delete
