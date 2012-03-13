@@ -1,6 +1,8 @@
 import pyglet
 
-from level import Component, Blocker, LevelObject
+from level_object import LevelObject, Component
+from level import Blocker
+from player import Player
 from temp import open_door_tex, closed_door_tex
 
 
@@ -29,7 +31,7 @@ class Door(LevelObject):
 
     def bump(self, blocker, who):
         assert blocker.owner is self
-        if hasattr(who, 'player'):
+        if who.has_component(Player):
             self.level.game.message('You open the door')
         self.is_open = not self.is_open
         self.blocker.blocks_sight = not self.is_open

@@ -1,4 +1,3 @@
-import collections
 import random
 
 import greenlet
@@ -6,20 +5,20 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
-from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player, Fighter, Description
-from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
+from command import Command
+from player import create_player
+from monster import create_random_monster
+from level import Level
+from level_object import LevelObject
+from components import Renderable, Blocker
+from level_generator import LevelGenerator, TILE_WALL, TILE_FLOOR
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
-from temp import monster_texes, get_wall_tex, floor_tex, player_tex, library_texes, light_anim, fountain_anim
+from temp import get_wall_tex, floor_tex, library_texes, light_anim, fountain_anim
 
 
 class GameExit(Exception):
     pass
-
-
-Command = collections.namedtuple('Command', 'name data')
-Command.WAIT = 'wait'
-Command.MOVE = 'move'
 
 
 class Game(object):
@@ -71,7 +70,7 @@ class Game(object):
                 if (x, y) in self.level.objects and self.level.objects[x, y]:
                     continue
 
-                monster = LevelObject(Actor(100, monster_act), Movement(), Renderable(random.choice(monster_texes)), Blocker(blocks_movement=True, bump_function=monster_bump), Fighter(2, 1, 0), Description('Goblin'))
+                monster = create_random_monster()
                 self.level.add_object(monster, x, y)
 
     def _render_level(self, generator):
@@ -102,8 +101,7 @@ class Game(object):
         self._add_features()
         self._add_monsters()
 
-        self.player = LevelObject(Actor(100, player_act), FOV(10), Movement(), Renderable(player_tex), Blocker(blocks_movement=True), Player(), Fighter(100, 1, 0))
-        self.player.order = 1
+        self.player = create_player()
         room = random.choice(self.level.rooms)
         self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
         self.player.fov.on_fov_updated = self._on_player_fov_updated
@@ -151,7 +149,7 @@ class Game(object):
 
                     if (x, y) in self.level.objects and len(self.level.objects[x, y]) > 0:
                         for obj in self.level.objects[x, y]:
-                            if hasattr(obj, Renderable.component_name):
+                            if obj.has_component(Renderable):
                                 renderable = obj.renderable
                                 break
 
@@ -209,29 +207,3 @@ class Game(object):
 
         if command is not None:
             self._g_mainloop.switch(command)
-
-
-def player_act(actor):
-    player = actor.owner
-    command = player.level.game.get_command()
-    player.level.game._message_log.mark_as_seen()
-    if command.name == Command.MOVE:
-        player.movement.move(*command.data)
-    return 100
-
-
-def monster_act(actor):
-    dx = random.randint(-1, 1)
-    dy = random.randint(-1, 1)
-    actor.owner.movement.move(dx, dy)
-    return 100
-
-
-def monster_bump(blocker, who):
-    monster = blocker.owner
-    if not hasattr(monster, Fighter.component_name):
-        return
-    if not hasattr(who, Player.component_name) or not hasattr(who, Fighter.component_name):
-        return
-
-    who.fighter.do_attack(monster)
