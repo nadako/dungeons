@@ -9,20 +9,20 @@ TILE_FLOOR = '.'
 TILE_DOOR_CLOSED = '+'
 TILE_DOOR_OPEN = '/'
 
-DIR_N = (0, -1)
-DIR_S = (0, 1)
-DIR_W = (-1, 0)
-DIR_E = (1, 0)
-
 
 class LevelGenerator(object):
 
-    def __init__(self, level):
+    def __init__(self, level, max_rooms=100, room_size_x=(7, 12), room_size_y=(7, 12), door_chance=0.75, open_door_chance=0.1):
         self.level = level
+        self.max_rooms = max_rooms
+        self.room_size_x = room_size_x
+        self.room_size_y = room_size_y
+        self.door_chance = door_chance
+        self.open_door_chance = open_door_chance
 
     def create_room(self):
-        size_x = random.randint(7, 12)
-        size_y = random.randint(7, 12)
+        size_x = random.randint(*self.room_size_x)
+        size_y = random.randint(*self.room_size_y)
         tiles = []
         for y in xrange(size_y):
             row = []
@@ -50,25 +50,25 @@ class LevelGenerator(object):
 
     def choose_gate(self):
         room = random.choice(self.level.rooms)
-        dir = random.choice((DIR_N, DIR_S, DIR_W, DIR_E))
+        dir = random.choice('nsew')
 
-        if dir is DIR_N:
-            x = randint_triangular(room.x + 1, room.x + room.size_x - 2)
-            y = room.y
-        elif dir is DIR_S:
+        if dir == 'n':
             x = randint_triangular(room.x + 1, room.x + room.size_x - 2)
             y = room.y + room.size_y - 1
-        elif dir is DIR_W:
-            x = room.x
-            y = randint_triangular(room.y + 1, room.y + room.size_y - 2)
-        elif dir is DIR_E:
+        elif dir == 's':
+            x = randint_triangular(room.x + 1, room.x + room.size_x - 2)
+            y = room.y
+        elif dir == 'e':
             x = room.x + room.size_x - 1
+            y = randint_triangular(room.y + 1, room.y + room.size_y - 2)
+        elif dir == 'w':
+            x = room.x
             y = randint_triangular(room.y + 1, room.y + room.size_y - 2)
 
         return x, y, dir
 
     def has_space_for_room(self, room, x, y):
-        if x < 0 or x + room.size_x > self.level.size_x or y < 0 or y + room.size_y > self.level.size_y:
+        if x < 0 or x + room.size_x >= self.level.size_x or y < 0 or y + room.size_y >= self.level.size_y:
             return False
 
         x1 = x
@@ -79,17 +79,25 @@ class LevelGenerator(object):
                 x +=1
             y += 1
             x = x1
+
         return True
 
     def connect_rooms(self, x, y, dir):
         tiles = [TILE_FLOOR, TILE_FLOOR]
 
-        if random.random() < 0.75:
-            tile = random.random() < 0.1 and TILE_DOOR_OPEN or TILE_DOOR_CLOSED
+        if random.random() < self.door_chance:
+            tile = random.random() < self.open_door_chance and TILE_DOOR_OPEN or TILE_DOOR_CLOSED
             tiles[random.randint(0, 1)] = tile
 
+        off_x, off_y = {
+            'n': (0, 1),
+            's': (0, -1),
+            'e': (1, 0),
+            'w': (-1, 0)
+        }[dir]
+
         self.level.set_tile(x, y, tiles[0])
-        self.level.set_tile(x + dir[0], y + dir[1], tiles[1])
+        self.level.set_tile(x + off_x, y + off_y, tiles[1])
 
     def generate(self):
         room = self.create_room()
@@ -98,20 +106,23 @@ class LevelGenerator(object):
         self.place_room(room, x, y)
 
         for i in xrange(self.level.size_x * self.level.size_y * 2):
+            if len(self.level.rooms) == self.max_rooms:
+                break
+
             room = self.create_room()
             x, y, dir = self.choose_gate()
 
-            if dir is DIR_N:
-                room_x = x - randint_triangular(1, room.size_x - 2)
-                room_y = y - room.size_y
-            elif dir is DIR_S:
+            if dir == 'n':
                 room_x = x - randint_triangular(1, room.size_x - 2)
                 room_y = y + 1
-            elif dir is DIR_W:
-                room_x = x - room.size_x
-                room_y = y - randint_triangular(1, room.size_y - 1)
-            elif dir is DIR_E:
+            elif dir == 's':
+                room_x = x - randint_triangular(1, room.size_x - 2)
+                room_y = y - room.size_y
+            elif dir == 'e':
                 room_x = x + 1
+                room_y = y - randint_triangular(1, room.size_y - 1)
+            elif dir == 'w':
+                room_x = x - room.size_x
                 room_y = y - randint_triangular(1, room.size_y - 1)
 
             if self.has_space_for_room(room, room_x, room_y):
