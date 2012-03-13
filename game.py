@@ -29,6 +29,7 @@ class Game(object):
         self._g_root = greenlet.getcurrent()
         self._g_mainloop = greenlet.greenlet(self.gameloop)
         self._waiting_event = None
+        self._fpsdisplay = pyglet.clock.ClockDisplay()
 
     def _add_features(self):
         # TODO: factor this out into feature generator
@@ -249,6 +250,7 @@ class Game(object):
         gl.glPopMatrix()
 
         self._last_messages_view.draw()
+        self._fpsdisplay.draw()
 
 
     def on_key_press(self, sym, mod):
