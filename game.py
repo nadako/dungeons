@@ -1,4 +1,4 @@
-from collections import deque
+import collections
 import random
 
 import greenlet
@@ -16,9 +16,12 @@ class GameExit(Exception):
     pass
 
 
+Command = collections.namedtuple('Command', 'name data')
+Command.MOVE = 'move'
+
+
 class Game(object):
 
-    EVT_KEY_PRESS = 'key-press'
     DUNGEON_SIZE_X = 100
     DUNGEON_SIZE_Y = 100
 
@@ -26,7 +29,6 @@ class Game(object):
         self.window = window
         self._g_root = greenlet.getcurrent()
         self._g_mainloop = greenlet.greenlet(self.gameloop)
-        self._waiting_event = None
         self._fpsdisplay = pyglet.clock.ClockDisplay()
 
     def _add_features(self):
@@ -149,18 +151,15 @@ class Game(object):
 
     def start(self):
         self.window.push_handlers(self)
-        self._switch_to_gameloop()
+        self._g_mainloop.switch()
 
-    def wait_key_press(self):
-        return self._g_root.switch(Game.EVT_KEY_PRESS)
+    def get_command(self):
+        return self._g_root.switch()
 
     def message(self, text, color=(255, 255, 255, 255)):
         if color:
             text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
         self._message_log.add_message(text)
-
-    def _switch_to_gameloop(self, *data):
-        self._waiting_event = self._g_mainloop.switch(*data)
 
     def _create_light_overlay(self):
         vertices = []
@@ -249,30 +248,35 @@ class Game(object):
 
 
     def on_key_press(self, sym, mod):
-        if self._waiting_event == Game.EVT_KEY_PRESS:
-            self._switch_to_gameloop(sym, mod)
+        command = None
+
+        if sym == key.NUM_8:
+            command = Command(Command.MOVE, (0, 1))
+        elif sym == key.NUM_2:
+            command = Command(Command.MOVE, (0, -1))
+        elif sym == key.NUM_4:
+            command = Command(Command.MOVE, (-1, 0))
+        elif sym == key.NUM_6:
+            command = Command(Command.MOVE, (1, 0))
+        elif sym == key.NUM_7:
+            command = Command(Command.MOVE, (-1, 1))
+        elif sym == key.NUM_9:
+            command = Command(Command.MOVE, (1, 1))
+        elif sym == key.NUM_1:
+            command = Command(Command.MOVE, (-1, -1))
+        elif sym == key.NUM_3:
+            command = Command(Command.MOVE, (1, -1))
+
+        if command is not None:
+            self._g_mainloop.switch(command)
 
 
 def player_act(actor):
     player = actor.owner
-    sym, mod = player.level.game.wait_key_press()
+    command = player.level.game.get_command()
     player.level.game._message_log.mark_as_seen()
-    if sym == key.NUM_8:
-        player.movement.move(0, 1)
-    elif sym == key.NUM_2:
-        player.movement.move(0, -1)
-    elif sym == key.NUM_4:
-        player.movement.move(-1, 0)
-    elif sym == key.NUM_6:
-        player.movement.move(1, 0)
-    elif sym == key.NUM_7:
-        player.movement.move(-1, 1)
-    elif sym == key.NUM_9:
-        player.movement.move(1, 1)
-    elif sym == key.NUM_1:
-        player.movement.move(-1, -1)
-    elif sym == key.NUM_3:
-        player.movement.move(1, -1)
+    if command.name == Command.MOVE:
+        player.movement.move(*command.data)
     return 100
 
 
