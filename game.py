@@ -64,8 +64,16 @@ class Game(object):
         self.player.fov.updated_callback = self._on_player_fov_update
         self.player.fov.update_light()
 
+        self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
+
         while True:
+            self._update_player_status()
             self.level.tick()
+
+    def _update_player_status(self):
+        fighter = self.player.fighter
+        text = 'HP: %d/%d, ATK: %d, DEF: %d' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense)
+        self._player_status.text = text
 
     def _on_player_fov_update(self, old_lightmap, new_lightmap):
         # update light overlay
@@ -141,6 +149,7 @@ class Game(object):
         gl.glPopMatrix()
 
         self._last_messages_view.draw()
+        self._player_status.draw()
         self._fpsdisplay.draw()
 
 
