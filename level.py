@@ -100,6 +100,10 @@ class Level(object):
 
         return False
 
+    def get_objects_at(self, x, y):
+        if (x, y) not in self.objects:
+            return []
+        return self.objects[x, y]
 
     def add_object(self, obj, x, y):
         insort_right(self.objects[x, y], obj)

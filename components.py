@@ -1,6 +1,7 @@
 import random
 import pyglet
 
+import game
 import level_object
 import player
 import shadowcaster
@@ -48,12 +49,13 @@ class FOV(level_object.Component):
         self.updated_callback = updated_callback
 
     def update_light(self):
+        old_lightmap = self.lightmap.copy()
         self.lightmap.clear()
         self.lightmap[self.owner.x, self.owner.y] = 1
         caster = shadowcaster.ShadowCaster(self.owner.level.blocks_sight, self.set_light)
         caster.calculate_light(self.owner.x, self.owner.y, self.radius)
         if self.updated_callback:
-            self.updated_callback(self.lightmap)
+            self.updated_callback(old_lightmap, self.lightmap)
 
     def set_light(self, x, y, intensity):
         self.lightmap[x, y] = intensity
@@ -111,11 +113,18 @@ class Fighter(level_object.Component):
 
         if source.has_component(player.Player):
             source.level.game.message('You hit %s for %d hp' % (self.owner.name, damage))
+        elif self.owner.has_component(player.Player):
+            self.owner.level.game.message('%s hits you for %d hp' % (source.name, damage))
+
         if self.health <= 0:
             self.die()
 
     def die(self):
-        self.owner.level.game.message('%s dies' % self.owner.name)
-        corpse = level_object.LevelObject(Renderable(random.choice(corpse_texes)))
-        self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
-        self.owner.level.remove_object(self.owner)
+        if self.owner.has_component(player.Player):
+            self.owner.level.game.message('You die')
+            raise game.GameExit()
+        else:
+            self.owner.level.game.message('%s dies' % self.owner.name)
+            corpse = level_object.LevelObject(Renderable(random.choice(corpse_texes)))
+            self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
+            self.owner.level.remove_object(self.owner)

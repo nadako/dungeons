@@ -6,6 +6,7 @@ from pyglet.window import key
 from pyglet import gl
 
 from command import Command
+from monster import InFOV
 from player import create_player
 from level import Level
 from components import Renderable
@@ -60,11 +61,22 @@ class Game(object):
         self.player = create_player()
         room = random.choice(self.level.layout.rooms)
         self.level.add_object(self.player, room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
-        self.player.fov.updated_callback = self._light_overlay.update_light
+        self.player.fov.updated_callback = self._on_player_fov_update
         self.player.fov.update_light()
 
         while True:
             self.level.tick()
+
+    def _on_player_fov_update(self, old_lightmap, new_lightmap):
+        # update light overlay
+        self._light_overlay.update_light(new_lightmap)
+
+        # set in_fov flags
+        keys = set(old_lightmap).intersection(new_lightmap)
+        for key in keys:
+            for obj in self.level.get_objects_at(*key):
+                if obj.has_component(InFOV):
+                    obj.in_fov.in_fov = key in new_lightmap
 
     def start(self):
         self.window.push_handlers(self)
