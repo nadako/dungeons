@@ -20,7 +20,7 @@ class Blocker(level_object.Component):
     @staticmethod
     def bump(blocker, who):
         if who.has_component(player.Player):
-            who.level.game.message('You bump into %r' % blocker.owner)
+            who.level.game.message('You bump into %s' % blocker.owner.name)
 
 
 class Actor(level_object.Component):

@@ -9,7 +9,7 @@ from command import Command
 from player import create_player
 from monster import create_random_monster
 from level import Level
-from level_object import LevelObject
+from level_object import LevelObject, Description
 from components import Renderable, Blocker
 from level_generator import LevelGenerator, TILE_WALL, TILE_FLOOR
 from light import LightOverlay
@@ -44,10 +44,10 @@ class Game(object):
                     (room.x + room.size_x - 2, room.y + room.size_y - 2),
                 ], random.randint(1, 4))
                 for x, y in coords:
-                    light = LevelObject(Renderable(light_anim, True), Blocker(blocks_movement=True))
+                    light = LevelObject(Renderable(light_anim, True), Blocker(blocks_movement=True), Description('Light'))
                     self.level.add_object(light, x, y)
             elif feature == 'fountain':
-                fountain = LevelObject(Renderable(fountain_anim, True), Blocker(blocks_movement=True))
+                fountain = LevelObject(Renderable(fountain_anim, True), Blocker(blocks_movement=True), Description('Fountain'))
                 self.level.add_object(fountain, room.x + room.size_x / 2, room.y + room.size_y / 2)
             elif feature == 'library':
                 y = room.y + room.size_y - 1
@@ -58,7 +58,7 @@ class Game(object):
                         continue
                     if x == room.x + room.size_x - 2 and self.level.get_tile(x + 1, y - 1) != TILE_WALL:
                         continue
-                    shelf = LevelObject(Renderable(random.choice(library_texes), True), Blocker(False, True))
+                    shelf = LevelObject(Renderable(random.choice(library_texes), True), Blocker(False, True), Description('Bookshelf'))
                     self.level.add_object(shelf, x, y - 1)
 
     def _add_monsters(self):
