@@ -9,9 +9,7 @@ from pyglet import gl
 from level import Level, LevelObject, Actor, Movement, Renderable, FOV, Blocker, Player, Fighter, Description
 from level_generator import LevelGenerator, TILE_EMPTY, TILE_WALL, TILE_FLOOR
 from message import MessageLog, LastMessagesView
-from temp import monster_texes, dungeon_tex, wall_tex_row, floor_tex, player_tex, library_texes, light_anim, fountain_anim
-
-from data.eight2empire import WALL_TRANSITION_TILES # load this dynamically, not import as python module
+from temp import monster_texes, get_wall_tex, floor_tex, player_tex, library_texes, light_anim, fountain_anim
 
 
 class GameExit(Exception):
@@ -78,7 +76,7 @@ class Game(object):
             for x in xrange(self.level.size_x):
                 tile = self.level.get_tile(x, y)
                 if tile == TILE_WALL:
-                    tex = self._get_wall_transition_tile(x, y)
+                    tex = get_wall_tex(self._get_wall_transition(x, y))
                     sprite = pyglet.sprite.Sprite(tex, x * 8, y * 8)
                 elif tile == TILE_FLOOR:
                     sprite = pyglet.sprite.Sprite(floor_tex, x * 8, y * 8)
@@ -91,7 +89,7 @@ class Game(object):
             return True
         return self.level.get_tile(x, y) in (TILE_WALL, TILE_EMPTY)
 
-    def _get_wall_transition_tile(self, x, y):
+    def _get_wall_transition(self, x, y):
         n = 1
         e = 2
         s = 4
@@ -119,10 +117,7 @@ class Game(object):
         if self._is_wall(x + 1, y - 1):
             v |= se
 
-        if v not in WALL_TRANSITION_TILES:
-            v &= 15
-
-        return dungeon_tex[wall_tex_row, WALL_TRANSITION_TILES[v]]
+        return v
 
     def gameloop(self):
         self._message_log = MessageLog()
