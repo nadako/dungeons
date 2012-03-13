@@ -7,14 +7,12 @@ from pyglet import gl
 
 from command import Command
 from player import create_player
-from monster import create_random_monster
 from level import Level
-from level_object import LevelObject, Description
-from components import Renderable, Blocker
-from level_generator import LevelGenerator, TILE_WALL, TILE_FLOOR
+from components import Renderable
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
-from temp import get_wall_tex, floor_tex, library_texes, light_anim, fountain_anim
+from temp import get_wall_tex, floor_tex
+from generator import LayoutGenerator
 
 
 class GameExit(Exception):
@@ -23,6 +21,7 @@ class GameExit(Exception):
 
 class Game(object):
 
+    ZOOM = 3
     DUNGEON_SIZE_X = 100
     DUNGEON_SIZE_Y = 100
 
@@ -32,56 +31,15 @@ class Game(object):
         self._g_mainloop = greenlet.greenlet(self.gameloop)
         self._fpsdisplay = pyglet.clock.ClockDisplay()
 
-    def _add_features(self):
-        # TODO: factor this out into feature generator
-        for room in self.level.rooms:
-            feature = random.choice([None, 'light', 'fountain', 'library'])
-            if feature == 'light':
-                coords = random.sample([
-                    (room.x + 1, room.y + 1),
-                    (room.x + room.size_x - 2, room.y + 1),
-                    (room.x + 1, room.y + room.size_y - 2),
-                    (room.x + room.size_x - 2, room.y + room.size_y - 2),
-                ], random.randint(1, 4))
-                for x, y in coords:
-                    light = LevelObject(Renderable(light_anim, True), Blocker(blocks_movement=True), Description('Light'))
-                    self.level.add_object(light, x, y)
-            elif feature == 'fountain':
-                fountain = LevelObject(Renderable(fountain_anim, True), Blocker(blocks_movement=True), Description('Fountain'))
-                self.level.add_object(fountain, room.x + room.size_x / 2, room.y + room.size_y / 2)
-            elif feature == 'library':
-                y = room.y + room.size_y - 1
-                for x in xrange(room.x + 1, room.x + room.size_x - 1):
-                    if self.level.get_tile(x, y) != TILE_WALL:
-                        continue
-                    if x == room.x + 1 and self.level.get_tile(room.x, y - 1) != TILE_WALL:
-                        continue
-                    if x == room.x + room.size_x - 2 and self.level.get_tile(x + 1, y - 1) != TILE_WALL:
-                        continue
-                    shelf = LevelObject(Renderable(random.choice(library_texes), True), Blocker(False, True), Description('Bookshelf'))
-                    self.level.add_object(shelf, x, y - 1)
-
-    def _add_monsters(self):
-        for room in self.level.rooms:
-            for i in xrange(random.randint(0, 3)):
-                x = random.randrange(room.x + 1, room.x + room.size_x - 1)
-                y = random.randrange(room.y + 1, room.y + room.size_y - 1)
-
-                if (x, y) in self.level.objects and self.level.objects[x, y]:
-                    continue
-
-                monster = create_random_monster()
-                self.level.add_object(monster, x, y)
-
-    def _render_level(self, generator):
+    def _render_level(self):
         self._level_sprites = {}
-        for y in xrange(self.level.size_y):
-            for x in xrange(self.level.size_x):
-                tile = self.level.get_tile(x, y)
-                if tile == TILE_WALL:
-                    tex = get_wall_tex(generator.get_wall_transition(x, y))
+        for x in xrange(self.level.layout.grid.size_x):
+            for y in xrange(self.level.layout.grid.size_y):
+                tile = self.level.layout.grid[x, y]
+                if tile == LayoutGenerator.TILE_WALL:
+                    tex = get_wall_tex(self.level.layout.get_wall_transition(x, y))
                     sprite = pyglet.sprite.Sprite(tex, x * 8, y * 8)
-                elif tile == TILE_FLOOR:
+                elif tile == LayoutGenerator.TILE_FLOOR:
                     sprite = pyglet.sprite.Sprite(floor_tex, x * 8, y * 8)
                 else:
                     sprite = None
@@ -91,25 +49,19 @@ class Game(object):
         self._message_log = MessageLog()
         self._last_messages_view = LastMessagesView(self._message_log, self.window.width, self.window.height)
 
-        self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-        generator = LevelGenerator(self.level)
-        generator.generate()
+        layout = LayoutGenerator(self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
+        layout.generate()
+        self.level = Level(self, layout)
 
-        self._render_level(generator)
-        self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
-
-        self._add_features()
-        self._add_monsters()
-
-        self.player = create_player()
-        room = random.choice(self.level.rooms)
-        self.level.add_object(self.player, room.x + room.size_x / 2, room.y + room.size_y / 2)
-        self.player.fov.on_fov_updated = self._on_player_fov_updated
-        self.player.fov.update_light()
-
+        self._render_level()
+        self._light_overlay = LightOverlay(self.level.layout.grid.size_x, self.level.layout.grid.size_y)
         self._memento = {}
 
-        self.zoom = 3
+        self.player = create_player()
+        room = random.choice(self.level.layout.rooms)
+        self.level.add_object(self.player, room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
+        self.player.fov.updated_callback = self._light_overlay.update_light
+        self.player.fov.update_light()
 
         while True:
             self.level.tick()
@@ -126,19 +78,16 @@ class Game(object):
             text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
         self._message_log.add_message(text)
 
-    def _on_player_fov_updated(self):
-        self._light_overlay.update_light(self.player.fov.lightmap)
-
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
         gl.glPushMatrix()
 
-        gl.glScalef(self.zoom, self.zoom, 1)
-        gl.glTranslatef(self.window.width / (2 * self.zoom) - self.player.x * 8, self.window.height / (2 * self.zoom) - self.player.y * 8, 0)
+        gl.glScalef(self.ZOOM, self.ZOOM, 1)
+        gl.glTranslatef(self.window.width / (2 * self.ZOOM) - self.player.x * 8, self.window.height / (2 * self.ZOOM) - self.player.y * 8, 0)
 
-        for x in xrange(self.level.size_x):
-            for y in xrange(self.level.size_y):
+        for x in xrange(self.level.layout.grid.size_x):
+            for y in xrange(self.level.layout.grid.size_y):
 
                 if self.player.fov.is_in_fov(x, y):
                     level_sprite = self._level_sprites[x, y]

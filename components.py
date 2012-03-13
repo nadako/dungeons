@@ -42,25 +42,24 @@ class FOV(level_object.Component):
 
     component_name = 'fov'
 
-    def __init__(self, radius):
+    def __init__(self, radius, updated_callback=None):
         self.radius = radius
         self.lightmap = {}
+        self.updated_callback = updated_callback
 
     def update_light(self):
         self.lightmap.clear()
         self.lightmap[self.owner.x, self.owner.y] = 1
         caster = shadowcaster.ShadowCaster(self.owner.level.blocks_sight, self.set_light)
         caster.calculate_light(self.owner.x, self.owner.y, self.radius)
-        self.on_fov_updated()
+        if self.updated_callback:
+            self.updated_callback(self.lightmap)
 
     def set_light(self, x, y, intensity):
         self.lightmap[x, y] = intensity
 
     def is_in_fov(self, x, y):
         return self.lightmap.get((x, y), 0) > 0
-
-    def on_fov_updated(self):
-        pass
 
 
 class Movement(level_object.Component):
