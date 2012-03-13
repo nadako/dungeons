@@ -25,6 +25,7 @@ def create_random_monster():
         InFOV(),
         level_object.Description('Goblin')
     )
+    monster.order = level_object.LevelObject.ORDER_CREATURES
     return monster
 
 

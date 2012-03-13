@@ -26,6 +26,7 @@ class DoorRenderable(Component):
 class Door(LevelObject):
 
     def __init__(self, is_open):
+        self.order = LevelObject.ORDER_FEATURES
         self.is_open = is_open
         super(Door, self).__init__(DoorRenderable(), Blocker(not is_open, not is_open, self.bump))
 

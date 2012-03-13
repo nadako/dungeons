@@ -44,9 +44,11 @@ class Level(object):
                 ], random.randint(1, 4))
                 for x, y in coords:
                     light = LevelObject(Renderable(light_anim, True), Blocker(blocks_movement=True), Description('Light'))
+                    light.order = LevelObject.ORDER_FEATURES
                     self.add_object(light, x, y)
             elif feature == 'fountain':
                 fountain = LevelObject(Renderable(fountain_anim, True), Blocker(blocks_movement=True), Description('Fountain'))
+                fountain.order = LevelObject.ORDER_FEATURES
                 self.add_object(fountain, room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
             elif feature == 'library':
                 y = room.y + room.grid.size_y - 1
@@ -58,6 +60,7 @@ class Level(object):
                     if x == room.x + room.grid.size_x - 2 and self.layout.grid[x + 1, y - 1] != LayoutGenerator.TILE_WALL:
                         continue
                     shelf = LevelObject(Renderable(random.choice(library_texes), True), Blocker(False, True), Description('Bookshelf'))
+                    shelf.order = LevelObject.ORDER_FEATURES
                     self.add_object(shelf, x, y - 1)
 
     def _add_monsters(self):

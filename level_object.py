@@ -1,6 +1,13 @@
 class LevelObject(object):
 
-    order = 0
+    ORDER_PLAYER = 0
+    ORDER_CREATURES = 10
+    ORDER_ITEMS = 20
+    ORDER_FEATURES = 30
+    ORDER_WALLS = 40
+    ORDER_FLOOR = 50
+
+    order = ORDER_FLOOR
 
     def __init__(self, *components):
         self.x = None
@@ -35,7 +42,7 @@ class LevelObject(object):
 
     def __lt__(self, other):
         if isinstance(other, LevelObject):
-            return self.order > other.order
+            return self.order < other.order
         return True
 
 

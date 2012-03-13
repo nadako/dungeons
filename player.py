@@ -20,7 +20,7 @@ def create_player():
         components.Blocker(blocks_movement=True),
         components.Fighter(100, 1, 0),
     )
-    player.order = 1
+    player.order = level_object.LevelObject.ORDER_PLAYER
     return player
 
 
