@@ -215,7 +215,7 @@ class Game(object):
         start_y = (y * 8 + 4) * self.ZOOM
 
         label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
-                                  x=x, y=start_y, anchor_x='center', anchor_y='center',
+                                  x=x, y=start_y, anchor_x='center', anchor_y='bottom',
                                   batch=self._text_overlay_batch)
 
         def update_label(animation):
