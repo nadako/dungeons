@@ -1,5 +1,6 @@
 import pyglet
 
+from components import FOV
 from level_object import LevelObject, Component
 from level import Blocker
 from player import Player
@@ -37,3 +38,5 @@ class Door(LevelObject):
         self.is_open = not self.is_open
         self.blocker.blocks_sight = not self.is_open
         self.blocker.blocks_movement = not self.is_open
+        if who.has_component(FOV):
+            who.fov.update_light()
