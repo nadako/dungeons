@@ -210,8 +210,8 @@ class Game(object):
 
     def animate_damage(self, x, y, dmg):
         # hacky hack
-        x = (x * 8 + 4) * self.ZOOM
-        start_y = (y * 8 + 4) * self.ZOOM
+        x = (x * 8 + random.randint(2, 6)) * self.ZOOM
+        start_y = (y * 8 + random.randint(0, 4)) * self.ZOOM
 
         label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
                                   x=x, y=start_y, anchor_x='center', anchor_y='bottom',
@@ -222,6 +222,6 @@ class Game(object):
             alpha = int((1.0 - animation.anim_time / animation.duration) * 255)
             label.color = (255, 0, 0, alpha)
 
-        anim = Animation(1)
+        anim = Animation(0.5)
         anim.update = functools.partial(update_label, anim)
         anim.finish = label.delete
