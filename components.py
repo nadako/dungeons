@@ -82,6 +82,14 @@ class Renderable(level_object.Component):
         return self.sprite
 
 
+class LayoutRenderable(level_object.Component):
+
+    component_name = 'layout_renderable'
+
+    def __init__(self, tile):
+        self.tile = tile
+
+
 class Fighter(level_object.Component):
 
     component_name = 'fighter'

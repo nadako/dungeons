@@ -11,7 +11,7 @@ from command import Command
 from monster import InFOV
 from player import create_player
 from level import Level
-from components import Renderable
+from components import Renderable, LayoutRenderable
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
 from render import Animation, TextureGroup
@@ -46,8 +46,11 @@ class Game(object):
                 y1 = y * 8
                 y2 = y1 + 8
 
-                tile = self.level.layout.grid[x, y]
-                if tile == LayoutGenerator.TILE_EMPTY:
+                for object in self.level.get_objects_at(x, y):
+                    if object.has_component(LayoutRenderable):
+                        tile = object.layout_renderable.tile
+                        break
+                else:
                     continue
 
                 # always add floor, because we wanna draw walls above floor

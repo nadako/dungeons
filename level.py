@@ -3,7 +3,7 @@ from collections import defaultdict, deque
 import random
 
 from actor import Actor
-from components import Blocker, Renderable
+from components import Blocker, Renderable, LayoutRenderable
 from door import Door
 from generator import LayoutGenerator
 from level_object import LevelObject, Description
@@ -28,9 +28,15 @@ class Level(object):
             for y in xrange(grid.size_y):
                 tile = grid[x, y]
                 if tile in (LayoutGenerator.TILE_DOOR_CLOSED, LayoutGenerator.TILE_DOOR_OPEN):
-                    is_open = (tile == LayoutGenerator.TILE_DOOR_OPEN)
-                    self.add_object(Door(is_open), x, y)
                     grid[x, y] = LayoutGenerator.TILE_FLOOR
+                    self.add_object(Door(tile == LayoutGenerator.TILE_DOOR_OPEN), x, y)
+                    self.add_object(LevelObject(Description('Floor'), LayoutRenderable(tile)), x, y)
+                elif tile == LayoutGenerator.TILE_WALL:
+                    wall = LevelObject(Description('Wall'), Blocker(True, True), LayoutRenderable(tile))
+                    wall.order = LevelObject.ORDER_WALLS
+                    self.add_object(wall, x, y)
+                elif tile == LayoutGenerator.TILE_FLOOR:
+                    self.add_object(LevelObject(Description('Floor'), LayoutRenderable(tile)), x, y)
 
     def _add_features(self):
         # TODO: factor this out into feature generator
@@ -78,31 +84,25 @@ class Level(object):
 
     def blocks_sight(self, x, y):
         if not self.layout.in_bounds(x, y):
-            return True
-
-        if self.layout.grid[x, y] == LayoutGenerator.TILE_WALL:
-            return True
+            return None
 
         if (x, y) in self.objects:
             for object in self.objects[x, y]:
                 if object.has_component(Blocker) and object.blocker.blocks_sight:
                     return object
 
-        return False
+        return None
 
     def blocks_movement(self, x, y):
         if not self.layout.in_bounds(x, y):
-            return True
-
-        if self.layout.grid[x, y] == LayoutGenerator.TILE_WALL:
-            return True
+            return None
 
         if (x, y) in self.objects:
             for object in self.objects[x, y]:
                 if object.has_component(Blocker) and object.blocker.blocks_movement:
                     return object
 
-        return False
+        return None
 
     def get_objects_at(self, x, y):
         if (x, y) not in self.objects:
