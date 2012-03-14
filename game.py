@@ -159,7 +159,7 @@ class Game(object):
             # draw all objects in this tile and remember objects saveable in memento
             x, y = key
             objects_memento = []
-            for obj in self.level.objects[key]:
+            for obj in self.level.get_objects_at(*key):
                 if obj.has_component(Renderable):
                     gl.glPushMatrix()
                     gl.glTranslatef(x * 8, y * 8, 0)

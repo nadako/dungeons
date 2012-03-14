@@ -16,8 +16,8 @@ class Level(object):
     def __init__(self, game, layout):
         self.game = game
         self.layout = layout
-        self.objects = defaultdict(list)
-        self.actors = deque()
+        self._actors = deque()
+        self._objects = defaultdict(list)
         self._process_layout()
         self._add_features()
         self._add_monsters()
@@ -76,7 +76,7 @@ class Level(object):
                 x = random.randrange(room.x + 1, room.x + room.grid.size_x - 1)
                 y = random.randrange(room.y + 1, room.y + room.grid.size_y - 1)
 
-                if (x, y) in self.objects and self.objects[x, y]:
+                if self.blocks_movement(x, y):
                     continue
 
                 monster = create_random_monster()
@@ -84,59 +84,57 @@ class Level(object):
 
     def blocks_sight(self, x, y):
         if not self.layout.in_bounds(x, y):
-            return None
+            return True
 
-        if (x, y) in self.objects:
-            for object in self.objects[x, y]:
-                if object.has_component(Blocker) and object.blocker.blocks_sight:
-                    return object
+        for object in self.get_objects_at(x, y):
+            if object.has_component(Blocker) and object.blocker.blocks_sight:
+                return object
 
-        return None
+        return False
 
     def blocks_movement(self, x, y):
         if not self.layout.in_bounds(x, y):
-            return None
+            return True
 
-        if (x, y) in self.objects:
-            for object in self.objects[x, y]:
-                if object.has_component(Blocker) and object.blocker.blocks_movement:
-                    return object
+        for object in self.get_objects_at(x, y):
+            if object.has_component(Blocker) and object.blocker.blocks_movement:
+                return object
 
-        return None
+        return False
 
     def get_objects_at(self, x, y):
-        if (x, y) not in self.objects:
-            return []
-        return self.objects[x, y]
+        if (x, y) not in self._objects:
+            return ()
+        return self._objects[x, y]
 
     def add_object(self, obj, x, y):
-        insort_right(self.objects[x, y], obj)
+        insort_right(self._objects[x, y], obj)
         obj.x = x
         obj.y = y
         obj.level = self
 
         if obj.has_component(Actor):
-            self.actors.append(obj.actor)
+            self._actors.append(obj.actor)
 
     def remove_object(self, obj):
-        self.objects[obj.x, obj.y].remove(obj)
+        self._objects[obj.x, obj.y].remove(obj)
         obj.x = None
         obj.y = None
         obj.level = None
 
         if obj.has_component(Actor):
-            self.actors.remove(obj.actor)
+            self._actors.remove(obj.actor)
 
     def move_object(self, obj, x, y):
-        self.objects[obj.x, obj.y].remove(obj)
-        insort_right(self.objects[x, y], obj)
+        self._objects[obj.x, obj.y].remove(obj)
+        insort_right(self._objects[x, y], obj)
         obj.x = x
         obj.y = y
 
     def tick(self):
-        if self.actors:
-            actor = self.actors[0]
-            self.actors.rotate()
+        if self._actors:
+            actor = self._actors[0]
+            self._actors.rotate()
             actor.energy += actor.speed
             while actor.energy > 0:
                 action = actor.act()
