@@ -58,14 +58,16 @@ class Movement(level_object.Component):
         new_y = self.owner.y + dy
 
         blocker = self.owner.level.blocks_movement(new_x, new_y)
-        if not blocker:
-            self.owner.level.move_object(self.owner, new_x, new_y)
-        elif isinstance(blocker, level_object.LevelObject):
+        if isinstance(blocker, level_object.LevelObject):
             blocker.blocker.bump(blocker.blocker, self.owner)
+        elif not blocker:
+            self.owner.level.move_object(self.owner, new_x, new_y)
 
-        # TODO: use some kind of events/signals
-        if self.owner.has_component(FOV):
-            self.owner.fov.update_light()
+            # TODO: use some kind of events/signals
+            if self.owner.has_component(FOV):
+                self.owner.fov.update_light()
+
+
 
 
 class Renderable(level_object.Component):
