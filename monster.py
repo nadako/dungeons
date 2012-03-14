@@ -8,7 +8,7 @@ from temp import monster_texes
 from util import calc_distance
 
 
-class InFOV(object):
+class InFOV(level_object.Component):
 
     component_name = 'in_fov'
 
