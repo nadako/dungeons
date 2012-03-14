@@ -13,7 +13,7 @@ from level import Level
 from components import Renderable
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
-from render import Animation
+from render import Animation, TextureGroup
 from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
 
@@ -59,7 +59,7 @@ class Game(object):
                     vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
                     tex_coords.extend(tex.tex_coords)
 
-        group = pyglet.graphics.TextureGroup(dungeon_tex)
+        group = TextureGroup(dungeon_tex)
         self._level_batch = pyglet.graphics.Batch()
         self._level_vlist = self._level_batch.add(len(vertices) / 2, pyglet.gl.GL_QUADS, group,
             ('v2i/static', vertices),
