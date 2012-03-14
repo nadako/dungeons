@@ -1,4 +1,5 @@
 import level_object
+from player import is_player
 
 
 class Actor(level_object.Component):
@@ -49,6 +50,11 @@ class AttackAction(Action):
 class PickupAction(Action):
 
     def do(self, obj):
-        items = obj.level.get_objects_at(obj.x, obj.y)
+        items = [o for o in obj.level.get_objects_at(obj.x, obj.y) if o is not obj]
         if items:
-            obj.inventory.pickup(items[0])
+            item = items[-1]
+            obj.inventory.pickup(item)
+            if is_player(obj):
+                obj.level.game.message('Picked up %s' % item.name)
+        elif is_player(obj):
+            obj.level.game.message('Nothing to pickup here')
