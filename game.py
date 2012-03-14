@@ -6,6 +6,7 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
+from camera import Camera
 from command import Command
 from monster import InFOV
 from player import create_player
@@ -87,6 +88,7 @@ class Game(object):
         self.player.fov.update_light()
 
         self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
+        self._camera = Camera(self.window, self.ZOOM, self.player)
 
         while True:
             self._update_player_status()
@@ -124,16 +126,24 @@ class Game(object):
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
-        cam_x = self.window.width / 2 - self.player.x * 8 * self.ZOOM
-        cam_y = self.window.height / 2 - self.player.y * 8 * self.ZOOM
+        with self._camera:
+            gl.glPushMatrix()
+            gl.glScalef(self.ZOOM, self.ZOOM, 1)
+            self._draw_layout_and_objects()
 
-        gl.glPushMatrix()
-        gl.glTranslatef(cam_x, cam_y, 0)
+            # draw FOV overlay, hiding unexplored level tiles and adding some lighting effect
+            pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
+            pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
+            self._light_overlay.draw()
+            gl.glPopMatrix()
 
-        gl.glPushMatrix()
-        gl.glScalef(self.ZOOM, self.ZOOM, 1)
+            # draw unscaledtext overlays (like dmg digits and so on)
+            self._text_overlay_batch.draw()
 
-        # draw level
+        self._draw_hud()
+
+    def _draw_layout_and_objects(self):
+        # draw level layout
         self._level_batch.draw()
 
         # prepare a collection of remembered objects to draw (we will remove parts that are currently in FOV)
@@ -165,23 +175,11 @@ class Game(object):
                 sprite.draw()
                 gl.glPopMatrix()
 
-        # draw FOV overlay, hiding unexplored level tiles and adding some lighting effect
-        pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
-        pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
-        self._light_overlay.draw()
 
-        gl.glPopMatrix() # pop scaling
-
-        # draw unscaledtext overlays (like dmg digits and so on)
-        self._text_overlay_batch.draw()
-
-        gl.glPopMatrix() # pop camera translate
-
-        # draw HUD
+    def _draw_hud(self):
         self._last_messages_view.draw()
         self._player_status.draw()
         self._fpsdisplay.draw()
-
 
     def on_key_press(self, sym, mod):
         command = None
