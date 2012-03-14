@@ -1,5 +1,10 @@
 (done!) In message log, mark last turn's messages with a marker, unmark on next turn.
 
+(generator) different regions at single level, with different rooms and probably even theme
+
+(gameplay) no explicit stat numbers, word description of character health and skills, so
+novie player don't bother with rpg system and advanced players know what is what by experience
+
 Create DOTA/HoN-based roguelike, where you develop your own hero and can take
 up to like 4 skills (one of which is ultimate one), you can find artifacts and
 assemble them into upgraded ones (heart+shield+lifetube -> helm of black legion),
