@@ -14,7 +14,7 @@ from components import Renderable
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
 from render import Animation
-from temp import get_wall_tex, floor_tex
+from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
 
 
@@ -35,18 +35,36 @@ class Game(object):
         self._fpsdisplay = pyglet.clock.ClockDisplay()
 
     def _render_level(self):
-        self._level_sprites = {}
+        vertices = []
+        tex_coords = []
+
         for x in xrange(self.level.layout.grid.size_x):
             for y in xrange(self.level.layout.grid.size_y):
+                x1 = x * 8
+                x2 = x1 + 8
+                y1 = y * 8
+                y2 = y1 + 8
+
                 tile = self.level.layout.grid[x, y]
+                if tile == LayoutGenerator.TILE_EMPTY:
+                    continue
+
+                # always add floor, because we wanna draw walls above floor
+                vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+                tex_coords.extend(floor_tex.tex_coords)
+
                 if tile == LayoutGenerator.TILE_WALL:
+                    # if we got wall, draw it above floor
                     tex = get_wall_tex(self.level.layout.get_wall_transition(x, y))
-                    sprite = pyglet.sprite.Sprite(tex, x * 8, y * 8)
-                elif tile == LayoutGenerator.TILE_FLOOR:
-                    sprite = pyglet.sprite.Sprite(floor_tex, x * 8, y * 8)
-                else:
-                    sprite = None
-                self._level_sprites[x, y] = sprite
+                    vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+                    tex_coords.extend(tex.tex_coords)
+
+        group = pyglet.graphics.TextureGroup(dungeon_tex)
+        self._level_batch = pyglet.graphics.Batch()
+        self._level_vlist = self._level_batch.add(len(vertices) / 2, pyglet.gl.GL_QUADS, group,
+            ('v2i/static', vertices),
+            ('t3f/statc', tex_coords),
+        )
 
     def gameloop(self):
         self._text_overlay_batch = pyglet.graphics.Batch()
@@ -82,7 +100,7 @@ class Game(object):
 
     def _on_player_fov_update(self, old_lightmap, new_lightmap):
         # update light overlay
-        self._light_overlay.update_light(new_lightmap)
+        self._light_overlay.update_light(new_lightmap, self._memento)
 
         # set in_fov flags
         keys = set(old_lightmap).intersection(new_lightmap)
@@ -106,53 +124,60 @@ class Game(object):
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
+        cam_x = self.window.width / 2 - self.player.x * 8 * self.ZOOM
+        cam_y = self.window.height / 2 - self.player.y * 8 * self.ZOOM
+
         gl.glPushMatrix()
+        gl.glTranslatef(cam_x, cam_y, 0)
 
+        gl.glPushMatrix()
         gl.glScalef(self.ZOOM, self.ZOOM, 1)
-        gl.glTranslatef(self.window.width / (2 * self.ZOOM) - self.player.x * 8, self.window.height / (2 * self.ZOOM) - self.player.y * 8, 0)
 
-        for x in xrange(self.level.layout.grid.size_x):
-            for y in xrange(self.level.layout.grid.size_y):
+        # draw level
+        self._level_batch.draw()
 
-                if self.player.fov.is_in_fov(x, y):
-                    level_sprite = self._level_sprites[x, y]
-                    level_sprite.draw()
+        # prepare a collection of remembered objects to draw (we will remove parts that are currently in FOV)
+        memento_to_draw = self._memento.copy()
 
-                    objects_memento = []
+        for key in self.player.fov.lightmap:
+            # remove from memento to draw as we're going to update it and draw current contents in this loop
+            memento_to_draw.pop(key, None)
 
-                    if (x, y) in self.level.objects and len(self.level.objects[x, y]) > 0:
-                        for obj in self.level.objects[x, y]:
-                            if obj.has_component(Renderable):
-                                gl.glPushMatrix()
-                                gl.glTranslatef(x * 8, y * 8, 0)
-                                obj.renderable.sprite.draw()
-                                gl.glPopMatrix()
-                                if obj.renderable.save_memento:
-                                    objects_memento.append(obj.renderable.get_memento_sprite())
+            # draw all objects in this tile and remember objects saveable in memento
+            x, y = key
+            objects_memento = []
+            for obj in self.level.objects[key]:
+                if obj.has_component(Renderable):
+                    gl.glPushMatrix()
+                    gl.glTranslatef(x * 8, y * 8, 0)
+                    obj.renderable.sprite.draw()
+                    gl.glPopMatrix()
+                    if obj.renderable.save_memento:
+                        objects_memento.append(obj.renderable.get_memento_sprite())
+            self._memento[key] = objects_memento
 
-                    self._memento[x, y] = (level_sprite, objects_memento)
+        # draw remembered objects outside of FOV
+        for key, sprites in memento_to_draw.items():
+            x, y = key
+            for sprite in sprites:
+                gl.glPushMatrix()
+                gl.glTranslatef(x * 8, y * 8, 0)
+                sprite.draw()
+                gl.glPopMatrix()
 
-                elif (x, y) in self._memento:
-                    level_sprite, object_sprites = self._memento[x, y]
-                    level_sprite.draw()
-
-                    for sprite in object_sprites:
-                        gl.glPushMatrix()
-                        gl.glTranslatef(x * 8, y * 8, 0)
-                        sprite.draw()
-                        gl.glPopMatrix()
-
+        # draw FOV overlay, hiding unexplored level tiles and adding some lighting effect
         pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
         pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
         self._light_overlay.draw()
 
-        gl.glPopMatrix()
+        gl.glPopMatrix() # pop scaling
 
-        gl.glPushMatrix()
-        gl.glTranslatef(self.window.width / 2 - self.player.x * 8 * self.ZOOM, self.window.height / 2 - self.player.y * 8 * self.ZOOM, 0)
+        # draw unscaledtext overlays (like dmg digits and so on)
         self._text_overlay_batch.draw()
-        gl.glPopMatrix()
 
+        gl.glPopMatrix() # pop camera translate
+
+        # draw HUD
         self._last_messages_view.draw()
         self._player_status.draw()
         self._fpsdisplay.draw()

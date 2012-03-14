@@ -27,13 +27,22 @@ class LightOverlay(object):
             ('c4B', colors)
         )
 
-    def update_light(self, lightmap):
+    def update_light(self, lightmap, memento):
         colors = []
 
         for tile_y in xrange(self.size_y):
             for tile_x in xrange(self.size_x):
-                intensity = lightmap.get((tile_x, tile_y), 0)
-                v = int((1 - (0.3 + intensity * 0.7)) * 255)
+                key = tile_x, tile_y
+                intensity = lightmap.get(key)
+
+                if intensity is None and key not in memento:
+                    # if tile is not lit and not in memento, overlay it with opaque black
+                    v = 255
+                else:
+                    # else calculate opacity based on light intensity
+                    intensity = intensity or 0
+                    v = int((1 - (0.3 + intensity * 0.7)) * 255)
+
                 c = (0, 0, 0, v)
                 colors.extend((c * 4))
 
