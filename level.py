@@ -13,17 +13,25 @@ from temp import light_anim, fountain_anim, library_texes
 
 class Level(object):
 
-    def __init__(self, game, layout):
+    def __init__(self, game, size_x, size_y):
         self.game = game
-        self.layout = layout
-        self._actors = deque()
+        self.size_x = size_x
+        self.size_y = size_y
+
         self._objects = defaultdict(list)
+        self._actors = deque()
+
+        self._generate_level()
+
+    def _generate_level(self):
+        self._layout = LayoutGenerator(self.size_x, self.size_y)
+        self._layout.generate()
         self._process_layout()
         self._add_features()
         self._add_monsters()
 
     def _process_layout(self):
-        grid = self.layout.grid
+        grid = self._layout.grid
         for x in xrange(grid.size_x):
             for y in xrange(grid.size_y):
                 tile = grid[x, y]
@@ -40,7 +48,7 @@ class Level(object):
 
     def _add_features(self):
         # TODO: factor this out into feature generator
-        for room in self.layout.rooms:
+        for room in self._layout.rooms:
             feature = random.choice([None, 'light', 'fountain', 'library'])
             if feature == 'light':
                 coords = random.sample([
@@ -60,18 +68,18 @@ class Level(object):
             elif feature == 'library':
                 y = room.y + room.grid.size_y - 1
                 for x in xrange(room.x + 1, room.x + room.grid.size_x - 1):
-                    if self.layout.grid[x, y] != LayoutGenerator.TILE_WALL:
+                    if self._layout.grid[x, y] != LayoutGenerator.TILE_WALL:
                         continue
-                    if x == room.x + 1 and self.layout.grid[room.x, y - 1] != LayoutGenerator.TILE_WALL:
+                    if x == room.x + 1 and self._layout.grid[room.x, y - 1] != LayoutGenerator.TILE_WALL:
                         continue
-                    if x == room.x + room.grid.size_x - 2 and self.layout.grid[x + 1, y - 1] != LayoutGenerator.TILE_WALL:
+                    if x == room.x + room.grid.size_x - 2 and self._layout.grid[x + 1, y - 1] != LayoutGenerator.TILE_WALL:
                         continue
                     shelf = LevelObject(Renderable(random.choice(library_texes), True), Blocker(False, True), Description('Bookshelf'))
                     shelf.order = LevelObject.ORDER_FEATURES
                     self.add_object(shelf, x, y - 1)
 
     def _add_monsters(self):
-        for room in self.layout.rooms:
+        for room in self._layout.rooms:
             for i in xrange(random.randint(0, 3)):
                 x = random.randrange(room.x + 1, room.x + room.grid.size_x - 1)
                 y = random.randrange(room.y + 1, room.y + room.grid.size_y - 1)
@@ -83,7 +91,7 @@ class Level(object):
                 self.add_object(monster, x, y)
 
     def blocks_sight(self, x, y):
-        if not self.layout.in_bounds(x, y):
+        if not self._layout.in_bounds(x, y):
             return True
 
         for object in self.get_objects_at(x, y):
@@ -93,7 +101,7 @@ class Level(object):
         return False
 
     def blocks_movement(self, x, y):
-        if not self.layout.in_bounds(x, y):
+        if not self._layout.in_bounds(x, y):
             return True
 
         for object in self.get_objects_at(x, y):
@@ -140,3 +148,6 @@ class Level(object):
                 action = actor.act()
                 actor.energy -= action.cost
                 action.do(actor.owner)
+
+    def get_wall_transition(self, x, y):
+        return self._layout.get_wall_transition(x, y)

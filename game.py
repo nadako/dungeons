@@ -39,8 +39,8 @@ class Game(object):
         vertices = []
         tex_coords = []
 
-        for x in xrange(self.level.layout.grid.size_x):
-            for y in xrange(self.level.layout.grid.size_y):
+        for x in xrange(self.level.size_x):
+            for y in xrange(self.level.size_y):
                 x1 = x * 8
                 x2 = x1 + 8
                 y1 = y * 8
@@ -59,7 +59,7 @@ class Game(object):
 
                 if tile == LayoutGenerator.TILE_WALL:
                     # if we got wall, draw it above floor
-                    tex = get_wall_tex(self.level.layout.get_wall_transition(x, y))
+                    tex = get_wall_tex(self.level.get_wall_transition(x, y))
                     vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
                     tex_coords.extend(tex.tex_coords)
 
@@ -76,16 +76,14 @@ class Game(object):
         self._message_log = MessageLog()
         self._last_messages_view = LastMessagesView(self._message_log, self.window.width, self.window.height)
 
-        layout = LayoutGenerator(self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-        layout.generate()
-        self.level = Level(self, layout)
+        self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
 
         self._render_level()
-        self._light_overlay = LightOverlay(self.level.layout.grid.size_x, self.level.layout.grid.size_y)
+        self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
         self._memento = {}
 
         self.player = create_player()
-        room = random.choice(self.level.layout.rooms)
+        room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
         self.level.add_object(self.player, room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
         self.player.fov.updated_callback = self._on_player_fov_update
         self.player.fov.update_light()
