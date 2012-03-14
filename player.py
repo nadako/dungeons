@@ -1,4 +1,3 @@
-from actor import Actor, MoveAction, PickupAction, WaitAction
 from inventory import Inventory
 import level_object
 import components
@@ -10,6 +9,10 @@ from temp import player_tex
 class Player(level_object.Component):
 
     component_name = 'player'
+
+
+def is_player(obj):
+    return obj.has_component(Player)
 
 
 def create_player():
@@ -39,3 +42,6 @@ def player_act(actor):
         return PickupAction()
 
     return WaitAction()
+
+
+from actor import Actor, MoveAction, PickupAction, WaitAction
