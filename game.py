@@ -33,7 +33,6 @@ class Game(object):
         self.window = window
         self._g_root = greenlet.getcurrent()
         self._g_mainloop = greenlet.greenlet(self.gameloop)
-        self._fpsdisplay = pyglet.clock.ClockDisplay()
 
     def _render_level(self):
         vertices = []
@@ -180,7 +179,6 @@ class Game(object):
     def _draw_hud(self):
         self._last_messages_view.draw()
         self._player_status.draw()
-        self._fpsdisplay.draw()
 
     def on_key_press(self, sym, mod):
         command = None
