@@ -6,14 +6,13 @@ import pyglet
 from pyglet.window import key
 from pyglet import gl
 
-from camera import Camera
 from command import Command
 from monster import InFOV
 from player import create_player
 from level import Level
 from light import LightOverlay
 from message import MessageLog, LastMessagesView
-from render import Animation, TextureGroup, Renderable, LayoutRenderable
+from render import Animation, TextureGroup, Renderable, LayoutRenderable, Camera
 from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
 
