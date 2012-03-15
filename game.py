@@ -15,6 +15,7 @@ from message import MessageLog, LastMessagesView
 from render import Animation, TextureGroup, Renderable, LayoutRenderable, Camera
 from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
+from util import get_name
 
 
 class GameExit(Exception):
@@ -94,7 +95,7 @@ class Game(object):
 
     def _update_player_status(self):
         fighter = self.player.fighter
-        inventory = ', '.join(item.name for item in self.player.inventory.items) or 'nothing'
+        inventory = ', '.join(get_name(item) for item in self.player.inventory.items) or 'nothing'
         text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
 

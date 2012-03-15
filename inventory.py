@@ -3,7 +3,7 @@ import level_object
 
 class Inventory(level_object.Component):
 
-    component_name = 'inventory'
+    COMPONENT_NAME = 'inventory'
 
     def __init__(self):
         self.items = []

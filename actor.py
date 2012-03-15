@@ -1,10 +1,11 @@
 import level_object
 from player import is_player
+from util import get_name
 
 
 class Actor(level_object.Component):
 
-    component_name = 'actor'
+    COMPONENT_NAME = 'actor'
 
     def __init__(self, speed, act=None):
         self.energy = 0
@@ -56,6 +57,6 @@ class PickupAction(Action):
             item = items[-1]
             obj.inventory.pickup(item)
             if is_player(obj):
-                obj.level.game.message('Picked up %s' % item.name)
+                obj.level.game.message('Picked up %s' % get_name(item))
         elif is_player(obj):
             obj.level.game.message('Nothing to pickup here')

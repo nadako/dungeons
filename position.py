@@ -3,7 +3,7 @@ from level_object import Component
 
 class Position(Component):
 
-    component_name = 'position'
+    COMPONENT_NAME = 'position'
 
     ORDER_FLOOR = 0
     ORDER_WALLS = 10

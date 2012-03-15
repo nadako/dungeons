@@ -12,7 +12,7 @@ from util import calc_distance
 
 class InFOV(level_object.Component):
 
-    component_name = 'in_fov'
+    COMPONENT_NAME = 'in_fov'
 
     def __init__(self):
         self.in_fov = False

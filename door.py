@@ -10,7 +10,7 @@ from temp import open_door_tex, closed_door_tex
 
 class DoorRenderable(Component):
 
-    component_name = 'renderable'
+    COMPONENT_NAME = 'renderable'
 
     def __init__(self):
         self.open_sprite = pyglet.sprite.Sprite(open_door_tex)

@@ -10,7 +10,7 @@ from temp import player_tex
 
 class Player(level_object.Component):
 
-    component_name = 'player'
+    COMPONENT_NAME = 'player'
 
 
 def is_player(obj):

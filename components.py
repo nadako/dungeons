@@ -7,11 +7,12 @@ from position import Position
 import shadowcaster
 from render import Renderable
 from temp import corpse_texes
+from util import get_name
 
 
 class Blocker(level_object.Component):
 
-    component_name = 'blocker'
+    COMPONENT_NAME = 'blocker'
 
     def __init__(self, blocks_sight=False, blocks_movement=False, bump_function=None):
         self.blocks_sight = blocks_sight
@@ -22,12 +23,12 @@ class Blocker(level_object.Component):
     @staticmethod
     def bump(blocker, who):
         if who.has_component(player.Player):
-            who.level.game.message('You bump into %s' % blocker.owner.name)
+            who.level.game.message('You bump into %s' % get_name(blocker.owner))
 
 
 class FOV(level_object.Component):
 
-    component_name = 'fov'
+    COMPONENT_NAME = 'fov'
 
     def __init__(self, radius, updated_callback=None):
         self.radius = radius
@@ -53,7 +54,7 @@ class FOV(level_object.Component):
 
 class Movement(level_object.Component):
 
-    component_name = 'movement'
+    COMPONENT_NAME = 'movement'
 
     def move(self, dx, dy):
         new_x = self.owner.position.x + dx
@@ -72,7 +73,7 @@ class Movement(level_object.Component):
 
 class Fighter(level_object.Component):
 
-    component_name = 'fighter'
+    COMPONENT_NAME = 'fighter'
 
     def __init__(self, max_health, attack, defense):
         self.health = self.max_health = max_health
@@ -87,9 +88,9 @@ class Fighter(level_object.Component):
         self.health -= damage
 
         if source.has_component(player.Player):
-            source.level.game.message('You hit %s for %d hp' % (self.owner.name, damage))
+            source.level.game.message('You hit %s for %d hp' % (get_name(self.owner), damage))
         elif self.owner.has_component(player.Player):
-            self.owner.level.game.message('%s hits you for %d hp' % (source.name, damage))
+            self.owner.level.game.message('%s hits you for %d hp' % (get_name(source), damage))
 
         self.owner.level.game.animate_damage(self.owner.position.x, self.owner.position.y, damage)
 
@@ -101,10 +102,10 @@ class Fighter(level_object.Component):
             self.owner.level.game.message('You die')
             raise game.GameExit()
         else:
-            self.owner.level.game.message('%s dies' % self.owner.name)
+            self.owner.level.game.message('%s dies' % get_name(self.owner))
             self.owner.level.add_object(level_object.LevelObject(
                 Renderable(random.choice(corpse_texes)),
-                level_object.Description('%s\'s corpse' % self.owner.name),
+                level_object.Description('%s\'s corpse' % get_name(self.owner)),
                 Position(self.owner.position.x, self.owner.position.y, Position.ORDER_FLOOR + 1),
             ))
             self.owner.level.remove_object(self.owner)

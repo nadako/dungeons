@@ -37,7 +37,7 @@ class Animation(object):
 
 class Renderable(level_object.Component):
 
-    component_name = 'renderable'
+    COMPONENT_NAME = 'renderable'
 
     def __init__(self, tex, save_memento=False):
         self.sprite = pyglet.sprite.Sprite(tex)
@@ -49,7 +49,7 @@ class Renderable(level_object.Component):
 
 class LayoutRenderable(level_object.Component):
 
-    component_name = 'layout_renderable'
+    COMPONENT_NAME = 'layout_renderable'
 
     def __init__(self, tile):
         self.tile = tile

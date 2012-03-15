@@ -9,36 +9,31 @@ class LevelObject(object):
     def add_component(self, component):
         assert isinstance(component, Component)
         if self.has_component(component):
-            raise RuntimeError('Trying to add duplicate component with name %s: %r' % (component.component_name, component))
-        setattr(self, component.component_name, component)
+            raise RuntimeError('Trying to add duplicate component with name %s: %r' % (component.COMPONENT_NAME, component))
+        setattr(self, component.COMPONENT_NAME, component)
         component.owner = self
 
-    def remove_component(self, name):
-        component = getattr(self, name, None)
-        if component:
-            assert isinstance(component, Component)
-            delattr(self, name)
+    def remove_component(self, component):
+        if not self.has_component(component):
+            raise RuntimeError('Trying to remove component that is not added: %s' % component.COMPONENT_NAME)
+        else:
+            component = getattr(self, component.COMPONENT_NAME)
             component.owner = None
+            delattr(self, component.COMPONENT_NAME)
 
     def has_component(self, component):
-        return hasattr(self, component.component_name)
-
-    @property
-    def name(self):
-        if self.has_component(Description):
-            return self.description.name
-        return 'Something'
+        return hasattr(self, component.COMPONENT_NAME)
 
 
 class Component(object):
 
-    component_name = None
+    COMPONENT_NAME = None
     owner = None
 
 
 class Description(Component):
 
-    component_name = 'description'
+    COMPONENT_NAME = 'description'
 
     def __init__(self, name):
         self.name = name
