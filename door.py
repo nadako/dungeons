@@ -4,6 +4,7 @@ from components import FOV
 from level_object import LevelObject, Component, Description
 from level import Blocker
 from player import Player
+from position import Position
 from temp import open_door_tex, closed_door_tex
 
 
@@ -26,10 +27,14 @@ class DoorRenderable(Component):
 
 class Door(LevelObject):
 
-    def __init__(self, is_open):
-        self.order = LevelObject.ORDER_FEATURES
+    def __init__(self, x=0, y=0, is_open=False):
         self.is_open = is_open
-        super(Door, self).__init__(DoorRenderable(), Blocker(not is_open, not is_open, self.bump), Description(self.get_name()))
+        super(Door, self).__init__(
+            Position(x, y, Position.ORDER_FEATURES),
+            DoorRenderable(),
+            Blocker(not is_open, not is_open, self.bump),
+            Description(self.get_name())
+        )
 
     def get_name(self):
         return 'Open door' if self.is_open else 'Closed door'

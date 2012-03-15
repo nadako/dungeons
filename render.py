@@ -63,8 +63,8 @@ class Camera(object):
         self.focus = focus
 
     def __enter__(self):
-        cam_x = self.window.width / 2 - self.focus.x * 8 * self.zoom_factor
-        cam_y = self.window.height / 2 - self.focus.y * 8 * self.zoom_factor
+        cam_x = self.window.width / 2 - self.focus.position.x * 8 * self.zoom_factor
+        cam_y = self.window.height / 2 - self.focus.position.y * 8 * self.zoom_factor
         pyglet.gl.gl.glPushMatrix()
         pyglet.gl.gl.glTranslatef(cam_x, cam_y, 0)
 

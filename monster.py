@@ -4,6 +4,7 @@ import level_object
 import components
 import player
 from actor import Actor, MoveAction, AttackAction, WaitAction
+from position import Position
 from render import Renderable
 from temp import monster_texes
 from util import calc_distance
@@ -17,9 +18,10 @@ class InFOV(level_object.Component):
         self.in_fov = False
 
 
-def create_random_monster():
+def create_random_monster(x, y):
     monster = level_object.LevelObject(
         Actor(80, monster_act),
+        Position(x, y, Position.ORDER_CREATURES),
         components.Movement(),
         Renderable(random.choice(monster_texes)),
         components.Blocker(blocks_movement=True, bump_function=monster_bump),
@@ -27,7 +29,6 @@ def create_random_monster():
         InFOV(),
         level_object.Description('Goblin')
     )
-    monster.order = level_object.LevelObject.ORDER_CREATURES
     return monster
 
 
@@ -35,15 +36,18 @@ def monster_act(actor):
     monster = actor.owner
     if monster.in_fov.in_fov:
         player = monster.level.game.player
-        distance = calc_distance(monster.x, monster.y, player.x, player.y)
+        monster_pos = monster.position
+        player_pos = player.position
+        distance = calc_distance(monster_pos.x, monster_pos.y, player_pos.x, player_pos.y)
         if distance < 2:
             return AttackAction(player)
         else:
-            dx = int(round((player.x - monster.x) / distance))
-            dy = int(round((player.y - monster.y) / distance))
+            dx = int(round((player_pos.x - monster_pos.x) / distance))
+            dy = int(round((player_pos.y - monster_pos.y) / distance))
             return MoveAction(dx, dy)
 
     return WaitAction()
+
 
 def monster_bump(blocker, who):
     monster = blocker.owner

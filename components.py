@@ -3,6 +3,7 @@ import random
 import game
 import level_object
 import player
+from position import Position
 import shadowcaster
 from render import Renderable
 from temp import corpse_texes
@@ -35,10 +36,11 @@ class FOV(level_object.Component):
 
     def update_light(self):
         old_lightmap = self.lightmap.copy()
+        pos = self.owner.position
         self.lightmap.clear()
-        self.lightmap[self.owner.x, self.owner.y] = 1
+        self.lightmap[pos.x, pos.y] = 1
         caster = shadowcaster.ShadowCaster(self.owner.level.blocks_sight, self.set_light)
-        caster.calculate_light(self.owner.x, self.owner.y, self.radius)
+        caster.calculate_light(pos.x, pos.y, self.radius)
         if self.updated_callback:
             self.updated_callback(old_lightmap, self.lightmap)
 
@@ -54,8 +56,8 @@ class Movement(level_object.Component):
     component_name = 'movement'
 
     def move(self, dx, dy):
-        new_x = self.owner.x + dx
-        new_y = self.owner.y + dy
+        new_x = self.owner.position.x + dx
+        new_y = self.owner.position.y + dy
 
         blocker = self.owner.level.blocks_movement(new_x, new_y)
         if isinstance(blocker, level_object.LevelObject):
@@ -89,7 +91,7 @@ class Fighter(level_object.Component):
         elif self.owner.has_component(player.Player):
             self.owner.level.game.message('%s hits you for %d hp' % (source.name, damage))
 
-        self.owner.level.game.animate_damage(self.owner.x, self.owner.y, damage)
+        self.owner.level.game.animate_damage(self.owner.position.x, self.owner.position.y, damage)
 
         if self.health <= 0:
             self.die()
@@ -100,8 +102,9 @@ class Fighter(level_object.Component):
             raise game.GameExit()
         else:
             self.owner.level.game.message('%s dies' % self.owner.name)
-            name = '%s\'s corpse' % self.owner.name
-            corpse = level_object.LevelObject(Renderable(random.choice(corpse_texes)), level_object.Description(name))
-            corpse.order = level_object.LevelObject.ORDER_FLOOR + 1
-            self.owner.level.add_object(corpse, self.owner.x, self.owner.y)
+            self.owner.level.add_object(level_object.LevelObject(
+                Renderable(random.choice(corpse_texes)),
+                level_object.Description('%s\'s corpse' % self.owner.name),
+                Position(self.owner.position.x, self.owner.position.y, Position.ORDER_FLOOR + 1),
+            ))
             self.owner.level.remove_object(self.owner)

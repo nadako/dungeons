@@ -50,7 +50,8 @@ class AttackAction(Action):
 class PickupAction(Action):
 
     def do(self, obj):
-        items = [o for o in obj.level.get_objects_at(obj.x, obj.y) if o is not obj]
+        pos = obj.position
+        items = [o for o in obj.level.get_objects_at(pos.x, pos.y) if o is not obj]
         if items:
             item = items[-1]
             obj.inventory.pickup(item)

@@ -79,9 +79,9 @@ class Game(object):
         self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
         self._memento = {}
 
-        self.player = create_player()
         room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
-        self.level.add_object(self.player, room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
+        self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
+        self.level.add_object(self.player)
         self.player.fov.updated_callback = self._on_player_fov_update
         self.player.fov.update_light()
 
