@@ -45,8 +45,7 @@ class LastMessagesView(object):
     def prepare_document(self):
         parts = ['{font_name "eight2empire"}']
         for text, new in self.message_log.get_latest():
-            if new:
-                parts.append('{color (255, 255, 0, 255)}>>')
+            parts.append('{color (255, 255, 0, %d)}>>' % (new and 255 or 0))
             parts.append(text)
             parts.append('{}\n')
         return pyglet.text.decode_attributed(''.join(parts))
