@@ -3,14 +3,23 @@ from collections import defaultdict, deque
 import random
 
 from actor import Actor
-from components import Blocker
+from blocker import Blocker
+from description import Description
 from door import Door
+from entity import Entity
 from generator import LayoutGenerator
-from level_object import LevelObject, Description
 from monster import create_random_monster
 from position import Position
 from render import Renderable, LayoutRenderable
 from temp import light_anim, fountain_anim, library_texes
+
+
+class BOUNDS(object):
+    def __repr__(self):
+        return '<BOUNDS>'
+    def __nonzero__(self):
+        return True
+BOUNDS = BOUNDS()
 
 
 class Level(object):
@@ -20,8 +29,8 @@ class Level(object):
         self.size_x = size_x
         self.size_y = size_y
 
+        self._entities = set()
         self._positions = defaultdict(list)
-        self._objects = set()
         self._actors = deque()
 
         self._generate_level()
@@ -39,12 +48,12 @@ class Level(object):
             for y in xrange(grid.size_y):
                 tile = grid[x, y]
                 if tile in (LayoutGenerator.TILE_DOOR_CLOSED, LayoutGenerator.TILE_DOOR_OPEN):
-                    self.add_object(Door(x, y, tile == LayoutGenerator.TILE_DOOR_OPEN))
-                    self.add_object(LevelObject(Description('Floor'), LayoutRenderable(tile), Position(x, y)))
+                    self.add_entity(Door(x, y, tile == LayoutGenerator.TILE_DOOR_OPEN))
+                    self.add_entity(Entity(Description('Floor'), LayoutRenderable(tile), Position(x, y)))
                 elif tile == LayoutGenerator.TILE_WALL:
-                    self.add_object(LevelObject(Description('Wall'), Blocker(True, True), LayoutRenderable(tile), Position(x, y, Position.ORDER_WALLS)))
+                    self.add_entity(Entity(Description('Wall'), Blocker(True, True), LayoutRenderable(tile), Position(x, y, Position.ORDER_WALLS)))
                 elif tile == LayoutGenerator.TILE_FLOOR:
-                    self.add_object(LevelObject(Description('Floor'), LayoutRenderable(tile), Position(x, y)))
+                    self.add_entity(Entity(Description('Floor'), LayoutRenderable(tile), Position(x, y)))
 
     def _add_features(self):
         # TODO: factor this out into feature generator
@@ -58,14 +67,14 @@ class Level(object):
                     (room.x + room.grid.size_x - 2, room.y + room.grid.size_y - 2),
                 ], random.randint(1, 4))
                 for x, y in coords:
-                    self.add_object(LevelObject(
+                    self.add_entity(Entity(
                         Renderable(light_anim, True),
                         Blocker(blocks_movement=True),
                         Description('Light'),
                         Position(x, y, Position.ORDER_FEATURES)
                     ))
             elif feature == 'fountain':
-                self.add_object(LevelObject(
+                self.add_entity(Entity(
                     Renderable(fountain_anim, True),
                     Blocker(blocks_movement=True),
                     Description('Fountain'),
@@ -80,7 +89,7 @@ class Level(object):
                         continue
                     if x == room.x + room.grid.size_x - 2 and self._layout.grid[x + 1, y - 1] != LayoutGenerator.TILE_WALL:
                         continue
-                    self.add_object(LevelObject(
+                    self.add_entity(Entity(
                         Renderable(random.choice(library_texes), True),
                         Blocker(blocks_movement=True),
                         Description('Bookshelf'),
@@ -92,62 +101,64 @@ class Level(object):
             for i in xrange(random.randint(0, 3)):
                 x = random.randrange(room.x + 1, room.x + room.grid.size_x - 1)
                 y = random.randrange(room.y + 1, room.y + room.grid.size_y - 1)
-                if not self.blocks_movement(x, y):
-                    self.add_object(create_random_monster(x, y))
+                if not self.get_movement_blocker(x, y):
+                    self.add_entity(create_random_monster(x, y))
 
-    def blocks_sight(self, x, y):
+    def get_sight_blocker(self, x, y):
         if not self._layout.in_bounds(x, y):
-            return True
+            return BOUNDS
 
-        for object in self.get_objects_at(x, y):
-            if object.has_component(Blocker) and object.blocker.blocks_sight:
-                return object
+        for entity in self.get_entities_at(x, y):
+            blocker = entity.get(Blocker)
+            if blocker and blocker.blocks_sight:
+                return blocker
 
-        return False
+        return None
 
-    def blocks_movement(self, x, y):
+    def get_movement_blocker(self, x, y):
         if not self._layout.in_bounds(x, y):
-            return True
+            return BOUNDS
 
-        for object in self.get_objects_at(x, y):
-            if object.has_component(Blocker) and object.blocker.blocks_movement:
-                return object
+        for entity in self.get_entities_at(x, y):
+            blocker = entity.get(Blocker)
+            if blocker and blocker.blocks_movement:
+                return blocker
 
-        return False
+        return None
 
-    def get_objects_at(self, x, y):
+    def get_entities_at(self, x, y):
         if (x, y) not in self._positions:
             return ()
-        return [obj for order, obj in self._positions[x, y]]
+        return [entity for order, entity in self._positions[x, y]]
 
-    def add_object(self, obj):
-        obj.level = self
-        self._objects.add(obj)
+    def add_entity(self, entity):
+        entity.level = self
+        self._entities.add(entity)
 
-        if obj.has_component(Position):
-            pos = obj.position
-            insort_right(self._positions[pos.x, pos.y], (pos.order, obj))
+        pos = entity.get(Position)
+        if pos:
+            insort_right(self._positions[pos.x, pos.y], (pos.order, entity))
 
-        if obj.has_component(Actor):
-            self._actors.append(obj.actor)
+        actor = entity.get(Actor)
+        if actor:
+            self._actors.append(actor)
 
-    def remove_object(self, obj):
-        self._objects.remove(obj)
-        obj.level = None
+    def remove_entity(self, entity):
+        self._entities.remove(entity)
+        entity.level = None
 
-        if obj.has_component(Position):
-            pos = obj.position
-            self._positions[pos.x, pos.y].remove((pos.order, obj))
+        pos = entity.get(Position)
+        if pos:
+            self._positions[pos.x, pos.y].remove((pos.order, entity))
 
-        if obj.has_component(Actor):
-            self._actors.remove(obj.actor)
+        actor = entity.get(Actor)
+        if actor:
+            self._actors.remove(actor)
 
-    def move_object(self, obj, x, y):
-        assert obj in self._objects
-
-        pos = obj.position
-        self._positions[pos.x, pos.y].remove((pos.order, obj))
-        insort_right(self._positions[x, y], (pos.order, obj))
+    def move_entity(self, entity, x, y):
+        pos = entity.get(Position)
+        self._positions[pos.x, pos.y].remove((pos.order, entity))
+        insort_right(self._positions[x, y], (pos.order, entity))
         pos.x = x
         pos.y = y
 

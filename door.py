@@ -1,9 +1,10 @@
 import pyglet
 
-from components import FOV
-from level_object import LevelObject, Component, Description
+from description import Description
+from entity import Component, Entity
+from fov import FOV
 from level import Blocker
-from player import Player
+from player import is_player
 from position import Position
 from temp import open_door_tex, closed_door_tex
 
@@ -25,7 +26,7 @@ class DoorRenderable(Component):
         return self.sprite
 
 
-class Door(LevelObject):
+class Door(Entity):
 
     def __init__(self, x=0, y=0, is_open=False):
         self.is_open = is_open
@@ -40,12 +41,16 @@ class Door(LevelObject):
         return 'Open door' if self.is_open else 'Closed door'
 
     def bump(self, blocker, who):
-        assert blocker.owner is self
-        if who.has_component(Player):
-            self.level.game.message('You open the door')
         self.is_open = not self.is_open
-        self.blocker.blocks_sight = not self.is_open
-        self.blocker.blocks_movement = not self.is_open
-        self.description.name = self.get_name()
-        if who.has_component(FOV):
-            who.fov.update_light()
+
+        if is_player(who):
+            who.level.game.message('You open the door')
+
+        blocker.blocks_sight = not self.is_open
+        blocker.blocks_movement = not self.is_open
+
+        self.get(Description).name = self.get_name()
+
+        # TODO: this doesnt belong here, fov updates should go when generic blocker changes blocks_sight
+        if who.has(FOV):
+            who.get(FOV).update_light()

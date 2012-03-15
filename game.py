@@ -7,6 +7,10 @@ from pyglet.window import key
 from pyglet import gl
 
 from command import Command
+from description import get_name
+from fight import Fighter
+from fov import FOV
+from inventory import Inventory
 from monster import InFOV
 from player import create_player
 from level import Level
@@ -15,11 +19,7 @@ from message import MessageLog, LastMessagesView
 from render import Animation, TextureGroup, Renderable, LayoutRenderable, Camera
 from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
-from util import get_name
 
-
-class GameExit(Exception):
-    pass
 
 
 class Game(object):
@@ -44,9 +44,10 @@ class Game(object):
                 y1 = y * 8
                 y2 = y1 + 8
 
-                for object in self.level.get_objects_at(x, y):
-                    if object.has_component(LayoutRenderable):
-                        tile = object.layout_renderable.tile
+                for entity in self.level.get_entities_at(x, y):
+                    renderable = entity.get(LayoutRenderable)
+                    if renderable:
+                        tile = renderable.tile
                         break
                 else:
                     continue
@@ -82,9 +83,9 @@ class Game(object):
 
         room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
         self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
-        self.level.add_object(self.player)
-        self.player.fov.updated_callback = self._on_player_fov_update
-        self.player.fov.update_light()
+        self.level.add_entity(self.player)
+        self.player.get(FOV).on_update = self._on_player_fov_update
+        self.player.get(FOV).update_light()
 
         self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
         self._camera = Camera(self.window, self.ZOOM, self.player)
@@ -94,8 +95,8 @@ class Game(object):
             self.level.tick()
 
     def _update_player_status(self):
-        fighter = self.player.fighter
-        inventory = ', '.join(get_name(item) for item in self.player.inventory.items) or 'nothing'
+        fighter = self.player.get(Fighter)
+        inventory = ', '.join(get_name(item) for item in self.player.get(Inventory).items) or 'nothing'
         text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
 
@@ -106,9 +107,10 @@ class Game(object):
         # set in_fov flags
         keys = set(old_lightmap).intersection(new_lightmap)
         for key in keys:
-            for obj in self.level.get_objects_at(*key):
-                if obj.has_component(InFOV):
-                    obj.in_fov.in_fov = key in new_lightmap
+            for entity in self.level.get_entities_at(*key):
+                infov = entity.get(InFOV)
+                if infov:
+                    infov.in_fov = key in new_lightmap
 
     def start(self):
         self.window.push_handlers(self)
@@ -148,21 +150,22 @@ class Game(object):
         # prepare a collection of remembered objects to draw (we will remove parts that are currently in FOV)
         memento_to_draw = self._memento.copy()
 
-        for key in self.player.fov.lightmap:
+        for key in self.player.get(FOV).lightmap:
             # remove from memento to draw as we're going to update it and draw current contents in this loop
             memento_to_draw.pop(key, None)
 
             # draw all objects in this tile and remember objects saveable in memento
             x, y = key
             objects_memento = []
-            for obj in self.level.get_objects_at(*key):
-                if obj.has_component(Renderable):
+            for entity in self.level.get_entities_at(*key):
+                renderable = entity.get(Renderable)
+                if renderable:
                     gl.glPushMatrix()
                     gl.glTranslatef(x * 8, y * 8, 0)
-                    obj.renderable.sprite.draw()
+                    renderable.sprite.draw()
                     gl.glPopMatrix()
-                    if obj.renderable.save_memento:
-                        objects_memento.append(obj.renderable.get_memento_sprite())
+                    if renderable.save_memento:
+                        objects_memento.append(renderable.get_memento_sprite())
             self._memento[key] = objects_memento
 
         # draw remembered objects outside of FOV

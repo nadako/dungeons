@@ -1,35 +1,27 @@
-from inventory import Inventory
-import level_object
-import components
-
-from command import Command
-from position import Position
-from render import Renderable
-from temp import player_tex
+from entity import Component
 
 
-class Player(level_object.Component):
+class Player(Component):
 
     COMPONENT_NAME = 'player'
 
 
-def is_player(obj):
-    return obj.has_component(Player)
+def is_player(entity):
+    return entity.has(Player)
 
 
 def create_player(x, y):
-    player = level_object.LevelObject(
+    return Entity(
         Player(),
         Position(x, y, Position.ORDER_PLAYER),
         Actor(100, player_act),
-        components.FOV(10),
-        components.Movement(),
+        FOV(10),
+        Movement(),
         Renderable(player_tex),
-        components.Blocker(blocks_movement=True),
-        components.Fighter(100, 1, 0),
+        Blocker(blocks_movement=True),
+        Fighter(100, 1, 0),
         Inventory(),
     )
-    return player
 
 
 def player_act(actor):
@@ -46,4 +38,14 @@ def player_act(actor):
     return WaitAction()
 
 
-from actor import Actor, MoveAction, PickupAction, WaitAction
+from actor import Actor
+from entity import Entity
+from actions import MoveAction, PickupAction, WaitAction
+from blocker import Blocker
+from fight import Fighter
+from fov import FOV
+from inventory import Inventory
+from command import Command
+from position import Position, Movement
+from render import Renderable
+from temp import player_tex

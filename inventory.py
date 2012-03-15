@@ -1,7 +1,8 @@
-import level_object
+from entity import Component
+from position import Position
 
 
-class Inventory(level_object.Component):
+class Inventory(Component):
 
     COMPONENT_NAME = 'inventory'
 
@@ -9,12 +10,16 @@ class Inventory(level_object.Component):
         self.items = []
 
     def pickup(self, item):
-        assert (item.position.x, item.position.y) == (self.owner.position.x, self.owner.position.y)
-        self.owner.level.remove_object(item)
+        item_pos = item.get(Position)
+        owner_pos = self.owner.get(Position)
+        assert (item_pos.x, item_pos.y) == (owner_pos.x, owner_pos.y)
+        self.owner.level.remove_entity(item)
         self.items.append(item)
 
     def drop(self, item):
         self.items.remove(item)
-        item.position.x = self.owner.position.x
-        item.position.y = self.owner.position.y
-        self.owner.level.add_object(item)
+        item_pos = item.get(Position)
+        owner_pos = self.owner.get(Position)
+        item_pos.x = owner_pos.x
+        item_pos.y = owner_pos.y
+        self.owner.level.add_entity(item)

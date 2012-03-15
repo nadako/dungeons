@@ -1,4 +1,4 @@
-from level_object import Component
+from entity import Component
 
 
 class Position(Component):
@@ -16,3 +16,29 @@ class Position(Component):
         self.x = x
         self.y = y
         self.order = order
+
+
+# TODO: this component is a mess, don't look there
+class Movement(Component):
+
+    COMPONENT_NAME = 'movement'
+
+    def move(self, dx, dy):
+        pos = self.owner.get(Position)
+        new_x = pos.x + dx
+        new_y = pos.y + dy
+
+        blocker = self.owner.level.get_movement_blocker(new_x, new_y)
+        if not blocker:
+            self.owner.level.move_entity(self.owner, new_x, new_y)
+
+            fov = self.owner.get(FOV)
+            if fov:
+                fov.update_light()
+        elif isinstance(blocker, Blocker):
+            blocker.bump(blocker, self.owner)
+
+
+from entity import Entity
+from blocker import Blocker
+from fov import FOV

@@ -1,5 +1,7 @@
 import pyglet
-import level_object
+
+from entity import Component
+from position import Position
 
 
 class TextureGroup(pyglet.graphics.TextureGroup):
@@ -35,7 +37,7 @@ class Animation(object):
         raise NotImplementedError()
 
 
-class Renderable(level_object.Component):
+class Renderable(Component):
 
     COMPONENT_NAME = 'renderable'
 
@@ -47,7 +49,7 @@ class Renderable(level_object.Component):
         return self.sprite
 
 
-class LayoutRenderable(level_object.Component):
+class LayoutRenderable(Component):
 
     COMPONENT_NAME = 'layout_renderable'
 
@@ -63,8 +65,9 @@ class Camera(object):
         self.focus = focus
 
     def __enter__(self):
-        cam_x = self.window.width / 2 - self.focus.position.x * 8 * self.zoom_factor
-        cam_y = self.window.height / 2 - self.focus.position.y * 8 * self.zoom_factor
+        pos = self.focus.get(Position)
+        cam_x = self.window.width / 2 - pos.x * 8 * self.zoom_factor
+        cam_y = self.window.height / 2 - pos.y * 8 * self.zoom_factor
         pyglet.gl.gl.glPushMatrix()
         pyglet.gl.gl.glTranslatef(cam_x, cam_y, 0)
 
