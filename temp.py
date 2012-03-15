@@ -1,4 +1,5 @@
 # TEMPRORARY global state (to be removed)
+import random
 import pyglet
 
 from util import load_tilegrid
@@ -22,12 +23,27 @@ closed_door_tex = dungeon_tex[9, 3]
 open_door_tex = dungeon_tex[8, 3]
 floor_tex = dungeon_tex[39, 4]
 player_tex = creature_tex[39, 2]
-monster_texes = [creature_tex[22, i] for i in xrange(10)]
 corpse_texes = [dungeon_tex[2, i] for i in xrange(15)]
 
 fountain_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 15:11 * dungeon_tex.columns + 17], 0.5)
 light_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 17:11 * dungeon_tex.columns + 19], 0.5)
 library_texes = [dungeon_tex[17, 14 + i] for i in xrange(6)]
+
+monster_families = [
+    ('Goblin', [creature_tex[22, i] for i in xrange(10)]),
+    ('Snake', [creature_tex[21, i] for i in xrange(3)]),
+    ('Serpentman', [creature_tex[21, i] for i in xrange(3, 9)]),
+    ('Lizard', [creature_tex[20, i] for i in xrange(2)]),
+    ('Lizardman', [creature_tex[20, i] for i in xrange(2, 9)]),
+    ('Ratling', [creature_tex[19, i] for i in xrange(11)]),
+    ('Minotaur', [creature_tex[18, i] for i in xrange(11)]),
+    ('Centaur', [creature_tex[17, i] for i in xrange(11)]),
+    ('Satyr', [creature_tex[17, i] for i in xrange(10)]),
+]
+
+def get_random_monster_params():
+    name, texes = random.choice(monster_families)
+    return name, random.choice(texes)
 
 
 def get_wall_tex(transition):

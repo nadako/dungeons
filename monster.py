@@ -1,4 +1,3 @@
-import random
 
 import level_object
 import components
@@ -6,7 +5,7 @@ import player
 from actor import Actor, MoveAction, AttackAction, WaitAction
 from position import Position
 from render import Renderable
-from temp import monster_texes
+from temp import get_random_monster_params
 from util import calc_distance
 
 
@@ -19,15 +18,17 @@ class InFOV(level_object.Component):
 
 
 def create_random_monster(x, y):
+    name, tex = get_random_monster_params()
+
     monster = level_object.LevelObject(
         Actor(80, monster_act),
         Position(x, y, Position.ORDER_CREATURES),
         components.Movement(),
-        Renderable(random.choice(monster_texes)),
+        Renderable(tex),
         components.Blocker(blocks_movement=True, bump_function=monster_bump),
         components.Fighter(2, 1, 0),
         InFOV(),
-        level_object.Description('Goblin')
+        level_object.Description(name),
     )
     return monster
 
