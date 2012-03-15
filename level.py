@@ -3,11 +3,12 @@ from collections import defaultdict, deque
 import random
 
 from actor import Actor
-from components import Blocker, Renderable, LayoutRenderable
+from components import Blocker
 from door import Door
 from generator import LayoutGenerator
 from level_object import LevelObject, Description
 from monster import create_random_monster
+from render import Renderable, LayoutRenderable
 from temp import light_anim, fountain_anim, library_texes
 
 

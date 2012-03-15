@@ -3,6 +3,7 @@ import level_object
 import components
 
 from command import Command
+from render import Renderable
 from temp import player_tex
 
 
@@ -21,7 +22,7 @@ def create_player():
         Actor(100, player_act),
         components.FOV(10),
         components.Movement(),
-        components.Renderable(player_tex),
+        Renderable(player_tex),
         components.Blocker(blocks_movement=True),
         components.Fighter(100, 1, 0),
         Inventory(),

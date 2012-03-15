@@ -1,4 +1,5 @@
 import pyglet
+import level_object
 
 
 class TextureGroup(pyglet.graphics.TextureGroup):
@@ -32,3 +33,23 @@ class Animation(object):
 
     def update(self):
         raise NotImplementedError()
+
+
+class Renderable(level_object.Component):
+
+    component_name = 'renderable'
+
+    def __init__(self, tex, save_memento=False):
+        self.sprite = pyglet.sprite.Sprite(tex)
+        self.save_memento = save_memento
+
+    def get_memento_sprite(self):
+        return self.sprite
+
+
+class LayoutRenderable(level_object.Component):
+
+    component_name = 'layout_renderable'
+
+    def __init__(self, tile):
+        self.tile = tile

@@ -4,6 +4,7 @@ import level_object
 import components
 import player
 from actor import Actor, MoveAction, AttackAction, WaitAction
+from render import Renderable
 from temp import monster_texes
 from util import calc_distance
 
@@ -20,7 +21,7 @@ def create_random_monster():
     monster = level_object.LevelObject(
         Actor(80, monster_act),
         components.Movement(),
-        components.Renderable(random.choice(monster_texes)),
+        Renderable(random.choice(monster_texes)),
         components.Blocker(blocks_movement=True, bump_function=monster_bump),
         components.Fighter(2, 1, 0),
         InFOV(),
