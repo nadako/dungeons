@@ -30,9 +30,8 @@ def monster_act(monster, level):
 
 
 def monster_bump(blocker, who):
-    monster = blocker.owner
     if is_player(who):
-        who.get(Fighter).do_attack(monster)
+        who.get(Fighter).do_attack(blocker.owner)
 
 
 from blocker import Blocker

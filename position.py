@@ -36,7 +36,7 @@ class Movement(Component):
             if fov:
                 fov.update_light()
         elif isinstance(blocker, Blocker):
-            blocker.bump(blocker, self.owner)
+            blocker.bump_function(blocker, self.owner)
 
 
 from entity import Entity

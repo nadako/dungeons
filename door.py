@@ -33,14 +33,14 @@ class Door(Entity):
         super(Door, self).__init__(
             Position(x, y, Position.ORDER_FEATURES),
             DoorRenderable(),
-            Blocker(not is_open, not is_open, self.bump),
+            Blocker(not is_open, not is_open, self.on_bump),
             Description(self.get_name())
         )
 
     def get_name(self):
         return 'Open door' if self.is_open else 'Closed door'
 
-    def bump(self, blocker, who):
+    def on_bump(self, blocker, who):
         self.is_open = not self.is_open
 
         if is_player(who):
