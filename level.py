@@ -5,7 +5,7 @@ import random
 from actor import Actor
 from blocker import Blocker
 from description import Description
-from door import Door
+from door import create_door
 from entity import Entity
 from generator import LayoutGenerator
 from monster import create_random_monster
@@ -48,7 +48,7 @@ class Level(object):
             for y in xrange(grid.size_y):
                 tile = grid[x, y]
                 if tile in (LayoutGenerator.TILE_DOOR_CLOSED, LayoutGenerator.TILE_DOOR_OPEN):
-                    self.add_entity(Door(x, y, tile == LayoutGenerator.TILE_DOOR_OPEN))
+                    self.add_entity(create_door(x, y, tile == LayoutGenerator.TILE_DOOR_OPEN))
                     self.add_entity(Entity(Description('Floor'), LayoutRenderable(tile), Position(x, y)))
                 elif tile == LayoutGenerator.TILE_WALL:
                     self.add_entity(Entity(Description('Wall'), Blocker(True, True), LayoutRenderable(tile), Position(x, y, Position.ORDER_WALLS)))

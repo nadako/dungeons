@@ -9,6 +9,15 @@ from position import Position
 from temp import open_door_tex, closed_door_tex
 
 
+class Door(Component):
+
+    def __init__(self, is_open=False):
+        self.is_open = is_open
+
+    def get_name(self):
+        return 'Open door' if self.is_open else 'Closed door'
+
+
 class DoorRenderable(Component):
 
     COMPONENT_NAME = 'renderable'
@@ -20,37 +29,36 @@ class DoorRenderable(Component):
 
     @property
     def sprite(self):
-        return self.owner.is_open and self.open_sprite or self.closed_sprite
+        return self.owner.get(Door).is_open and self.open_sprite or self.closed_sprite
 
     def get_memento_sprite(self):
         return self.sprite
 
 
-class Door(Entity):
+def door_bump(blocker, who):
+    door = blocker.owner
+    door_component = door.get(Door)
+    door_component.is_open = not door_component.is_open
 
-    def __init__(self, x=0, y=0, is_open=False):
-        self.is_open = is_open
-        super(Door, self).__init__(
-            Position(x, y, Position.ORDER_FEATURES),
-            DoorRenderable(),
-            Blocker(not is_open, not is_open, self.on_bump),
-            Description(self.get_name())
-        )
+    if is_player(who):
+        who.level.game.message('You open the door')
 
-    def get_name(self):
-        return 'Open door' if self.is_open else 'Closed door'
+    blocker.blocks_sight = not door_component.is_open
+    blocker.blocks_movement = not door_component.is_open
 
-    def on_bump(self, blocker, who):
-        self.is_open = not self.is_open
+    door.get(Description).name = door_component.get_name()
 
-        if is_player(who):
-            who.level.game.message('You open the door')
+    # TODO: this doesnt belong here, fov updates should go when generic blocker changes blocks_sight
+    if who.has(FOV):
+        who.get(FOV).update_light()
 
-        blocker.blocks_sight = not self.is_open
-        blocker.blocks_movement = not self.is_open
 
-        self.get(Description).name = self.get_name()
-
-        # TODO: this doesnt belong here, fov updates should go when generic blocker changes blocks_sight
-        if who.has(FOV):
-            who.get(FOV).update_light()
+def create_door(x=0, y=0, is_open=False):
+    door_component = Door(is_open)
+    return Entity(
+        door_component,
+        Position(x, y, Position.ORDER_FEATURES),
+        DoorRenderable(),
+        Blocker(not is_open, not is_open, door_bump),
+        Description(door_component.get_name())
+    )
