@@ -168,7 +168,7 @@ class Level(object):
             self._actors.rotate()
             actor.energy += actor.speed
             while actor.energy > 0:
-                action = actor.act()
+                action = actor.act_function(actor.owner, self)
                 actor.energy -= action.cost
                 action.do(actor.owner)
 

@@ -13,10 +13,9 @@ def create_random_monster(x, y):
     return monster
 
 
-def monster_act(actor):
-    monster = actor.owner
+def monster_act(monster, level):
     if monster.get(InFOV).in_fov:
-        player = monster.level.game.player
+        player = level.game.player
         monster_pos = monster.get(Position)
         player_pos = player.get(Position)
         distance = calc_distance(monster_pos.x, monster_pos.y, player_pos.x, player_pos.y)
