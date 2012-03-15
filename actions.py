@@ -1,4 +1,5 @@
 from actor import Action
+from item import Item
 
 
 class WaitAction(Action):
@@ -30,7 +31,7 @@ class PickupAction(Action):
 
     def do(self, entity):
         pos = entity.get(Position)
-        items = [o for o in entity.level.get_entities_at(pos.x, pos.y) if o is not entity]
+        items = [e for e in entity.level.get_entities_at(pos.x, pos.y) if e is not entity and e.has(Item)]
         if items:
             item = items[-1]
             entity.get(Inventory).pickup(item)

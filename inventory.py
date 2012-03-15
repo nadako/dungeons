@@ -10,9 +10,6 @@ class Inventory(Component):
         self.items = []
 
     def pickup(self, item):
-        item_pos = item.get(Position)
-        owner_pos = self.owner.get(Position)
-        assert (item_pos.x, item_pos.y) == (owner_pos.x, owner_pos.y)
         self.owner.level.remove_entity(item)
         self.items.append(item)
 
