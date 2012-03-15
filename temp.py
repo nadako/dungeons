@@ -1,4 +1,5 @@
 # TEMPRORARY global state (to be removed)
+import os
 import random
 import pyglet
 
@@ -13,11 +14,14 @@ def set_state(self):
 pyglet.sprite.SpriteGroup.set_state = set_state
 
 
-pyglet.font.add_file('data/font.ttf')
+pyglet.resource.path = [os.path.join(os.path.dirname(__file__), 'data')]
+pyglet.resource.reindex()
+
+pyglet.font.add_file(pyglet.resource.file('font.ttf'))
 pyglet.font.load('eight2empire')
 
-dungeon_tex = load_tilegrid('data/dungeon.png')
-creature_tex = load_tilegrid('data/creatures.png')
+dungeon_tex = load_tilegrid('dungeon.png')
+creature_tex = load_tilegrid('creatures.png')
 
 closed_door_tex = dungeon_tex[9, 3]
 open_door_tex = dungeon_tex[8, 3]
@@ -47,11 +51,11 @@ def get_random_monster_params():
 
 
 def get_wall_tex(transition):
-    if transition not in WALL_TRANSITION_TILES:
+    if transition not in _WALL_TRANSITION_TILES:
         transition &= 15
-    return dungeon_tex[33, WALL_TRANSITION_TILES[transition]]
+    return dungeon_tex[33, _WALL_TRANSITION_TILES[transition]]
 
-WALL_TRANSITION_TILES = {
+_WALL_TRANSITION_TILES = {
     0: 20,
     1: 13,
     2: 14,
