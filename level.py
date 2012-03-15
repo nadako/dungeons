@@ -36,7 +36,6 @@ class Level(object):
             for y in xrange(grid.size_y):
                 tile = grid[x, y]
                 if tile in (LayoutGenerator.TILE_DOOR_CLOSED, LayoutGenerator.TILE_DOOR_OPEN):
-                    grid[x, y] = LayoutGenerator.TILE_FLOOR
                     self.add_object(Door(tile == LayoutGenerator.TILE_DOOR_OPEN), x, y)
                     self.add_object(LevelObject(Description('Floor'), LayoutRenderable(tile)), x, y)
                 elif tile == LayoutGenerator.TILE_WALL:
