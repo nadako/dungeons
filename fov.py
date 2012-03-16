@@ -36,4 +36,3 @@ class InFOV(Component):
 
     def __init__(self):
         self.in_fov = False
-`
