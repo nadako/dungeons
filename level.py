@@ -8,10 +8,11 @@ from description import Description
 from door import create_door
 from entity import Entity
 from generator import LayoutGenerator
+from item import Item
 from monster import create_random_monster
 from position import Position
 from render import Renderable, LayoutRenderable
-from temp import light_anim, fountain_anim, library_texes
+from temp import light_anim, fountain_anim, library_texes, gold_texes
 
 
 class BOUNDS(object):
@@ -41,6 +42,7 @@ class Level(object):
         self._process_layout()
         self._add_features()
         self._add_monsters()
+        self._add_items()
 
     def _process_layout(self):
         grid = self._layout.grid
@@ -103,6 +105,20 @@ class Level(object):
                 y = random.randrange(room.y + 1, room.y + room.grid.size_y - 1)
                 if not self.get_movement_blocker(x, y):
                     self.add_entity(create_random_monster(x, y))
+
+    def _add_items(self):
+        for room in self._layout.rooms:
+            if random.random() > 0.3:
+                continue
+            x = random.randrange(room.x + 1, room.x + room.grid.size_x - 1)
+            y = random.randrange(room.y + 1, room.y + room.grid.size_y - 1)
+            if not self.get_movement_blocker(x, y):
+                self.add_entity(Entity(
+                    Description('Gold'),
+                    Renderable(random.choice(gold_texes)),
+                    Position(x, y),
+                    Item(),
+                ))
 
     def get_sight_blocker(self, x, y):
         if not self._layout.in_bounds(x, y):

@@ -22,6 +22,7 @@ pyglet.font.load('eight2empire')
 
 dungeon_tex = load_tilegrid('dungeon.png')
 creature_tex = load_tilegrid('creatures.png')
+item_tex = load_tilegrid('items.png')
 
 closed_door_tex = dungeon_tex[9, 3]
 open_door_tex = dungeon_tex[8, 3]
@@ -32,6 +33,8 @@ corpse_texes = [dungeon_tex[2, i] for i in xrange(15)]
 fountain_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 15:11 * dungeon_tex.columns + 17], 0.5)
 light_anim = pyglet.image.Animation.from_image_sequence(dungeon_tex[11 * dungeon_tex.columns + 17:11 * dungeon_tex.columns + 19], 0.5)
 library_texes = [dungeon_tex[17, 14 + i] for i in xrange(6)]
+
+gold_texes = [item_tex[31, i] for i in xrange(15)]
 
 monster_families = [
     ('Goblin', [creature_tex[22, i] for i in xrange(10)]),
