@@ -1,8 +1,8 @@
 from bisect import insort_right
-from collections import defaultdict, deque
+from collections import defaultdict
 import random
 
-from actor import Actor
+from actor import Actor, ActorSystem
 from blocker import Blocker
 from description import Description
 from door import create_door
@@ -26,13 +26,13 @@ BOUNDS = BOUNDS()
 class Level(object):
 
     def __init__(self, game, size_x, size_y):
+        self.actor_system = ActorSystem(self)
         self.game = game
         self.size_x = size_x
         self.size_y = size_y
 
         self._entities = set()
         self._positions = defaultdict(list)
-        self._actors = deque()
 
         self._generate_level()
 
@@ -155,9 +155,8 @@ class Level(object):
         if pos:
             insort_right(self._positions[pos.x, pos.y], (pos.order, entity))
 
-        actor = entity.get(Actor)
-        if actor:
-            self._actors.append(actor)
+        if entity.has(Actor):
+            self.actor_system.add_entity(entity)
 
     def remove_entity(self, entity):
         self._entities.remove(entity)
@@ -167,9 +166,8 @@ class Level(object):
         if pos:
             self._positions[pos.x, pos.y].remove((pos.order, entity))
 
-        actor = entity.get(Actor)
-        if actor:
-            self._actors.remove(actor)
+        if entity.has(Actor):
+            self.actor_system.remove_entity(entity)
 
     def move_entity(self, entity, x, y):
         pos = entity.get(Position)
@@ -179,14 +177,7 @@ class Level(object):
         pos.y = y
 
     def tick(self):
-        if self._actors:
-            actor = self._actors[0]
-            self._actors.rotate()
-            actor.energy += actor.speed
-            while actor.energy > 0:
-                action = actor.act_function(actor.owner, self)
-                actor.energy -= action.cost
-                action.do(actor.owner)
+        self.actor_system.update()
 
     def get_wall_transition(self, x, y):
         return self._layout.get_wall_transition(x, y)
