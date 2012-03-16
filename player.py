@@ -32,13 +32,15 @@ def player_act(player, level):
         return MoveAction(*command.data)
     elif command.name == Command.PICKUP:
         return PickupAction()
+    elif command.name == Command.DROP:
+        return DropAction()
 
     return WaitAction()
 
 
 from actor import Actor
 from entity import Entity
-from actions import MoveAction, PickupAction, WaitAction
+from actions import MoveAction, PickupAction, WaitAction, DropAction
 from blocker import Blocker
 from fight import Fighter
 from fov import FOV

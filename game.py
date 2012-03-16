@@ -205,6 +205,8 @@ class Game(object):
             command = Command(Command.WAIT, None)
         elif sym == key.G:
             command = Command(Command.PICKUP, None)
+        elif sym == key.D:
+            command = Command(Command.DROP, None)
 
         if command is not None:
             self._g_mainloop.switch(command)

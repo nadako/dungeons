@@ -34,11 +34,31 @@ class PickupAction(Action):
         items = [e for e in entity.level.get_entities_at(pos.x, pos.y) if e is not entity and e.has(Item)]
         if items:
             item = items[-1]
-            entity.get(Inventory).pickup(item)
+            entity.level.remove_entity(item)
+            entity.get(Inventory).items.append(item)
             if is_player(entity):
                 entity.level.game.message('Picked up %s' % get_name(item))
         elif is_player(entity):
             entity.level.game.message('Nothing to pickup here')
+
+
+class DropAction(Action):
+
+    def do(self, entity):
+        inventory = entity.get(Inventory)
+        if not inventory.items:
+            if is_player(entity):
+                entity.level.game.message('Nothing to drop')
+        else:
+            item = inventory.items[-1]
+            inventory.items.remove(item)
+            item_pos = item.get(Position)
+            entity_pos = entity.get(Position)
+            item_pos.x = entity_pos.x
+            item_pos.y = entity_pos.y
+            entity.level.add_entity(item)
+            if is_player(entity):
+                entity.level.game.message('Dropped up %s' % get_name(item))
 
 
 from fight import Fighter
