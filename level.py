@@ -117,7 +117,7 @@ class Level(object):
                     Description('Gold'),
                     Renderable(random.choice(gold_texes)),
                     Position(x, y),
-                    Item(),
+                    Item('gold', quantity=random.randint(1, 50)),
                 ))
 
     def get_sight_blocker(self, x, y):

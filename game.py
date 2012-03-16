@@ -11,6 +11,7 @@ from description import get_name
 from fight import Fighter
 from fov import FOV
 from inventory import Inventory
+from item import Item
 from monster import InFOV
 from player import create_player
 from level import Level
@@ -96,7 +97,14 @@ class Game(object):
 
     def _update_player_status(self):
         fighter = self.player.get(Fighter)
-        inventory = ', '.join(get_name(item) for item in self.player.get(Inventory).items) or 'nothing'
+        item_names = []
+        for item in self.player.get(Inventory).items:
+            name = get_name(item)
+            item_component = item.get(Item)
+            if item_component.quantity > 1:
+                name += ' (%d)' % item_component.quantity
+            item_names.append(name)
+        inventory = ', '.join(item_names) or 'nothing'
         text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
 

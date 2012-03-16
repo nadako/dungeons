@@ -35,9 +35,9 @@ class PickupAction(Action):
         if items:
             item = items[-1]
             entity.level.remove_entity(item)
-            entity.get(Inventory).items.append(item)
+            entity.get(Inventory).pickup(item)
             if is_player(entity):
-                entity.level.game.message('Picked up %s' % get_name(item))
+                entity.level.game.message('Picked up %d %s' % (item.get(Item).quantity, get_name(item)))
         elif is_player(entity):
             entity.level.game.message('Nothing to pickup here')
 
