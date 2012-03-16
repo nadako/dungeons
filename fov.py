@@ -1,4 +1,5 @@
 from entity import Component
+from position import Position
 from shadowcaster import ShadowCaster
 
 
@@ -35,6 +36,4 @@ class InFOV(Component):
 
     def __init__(self):
         self.in_fov = False
-
-
-from position import Position
+`
