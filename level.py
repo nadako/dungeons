@@ -114,7 +114,7 @@ class Level(object):
                 self.add_entity(Entity(
                     Description('Gold'),
                     Renderable(random.choice(gold_texes)),
-                    Position(x, y),
+                    Position(x, y, order=Position.ORDER_ITEMS),
                     Item('gold', quantity=random.randint(1, 50)),
                 ))
 
