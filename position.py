@@ -1,4 +1,8 @@
+from bisect import insort_right
+from collections import defaultdict
+
 from entity import Component
+from blocker import Blocker
 
 
 class Position(Component):
@@ -18,6 +22,32 @@ class Position(Component):
         self.order = order
 
 
+class PositionSystem(object):
+
+    def __init__(self):
+        self._positions = defaultdict(list)
+
+    def add_entity(self, entity):
+        position = entity.get(Position)
+        insort_right(self._positions[position.x, position.y], (position.order, entity))
+
+    def remove_entity(self, entity):
+        position = entity.get(Position)
+        self._positions[position.x, position.y].remove((position.order, entity))
+
+    def get_entities_at(self, x, y):
+        if (x, y) not in self._positions:
+            return ()
+        return tuple(entity for order, entity in self._positions[x, y])
+
+    def move_entity(self, entity, x, y):
+        position = entity.get(Position)
+        self._positions[position.x, position.y].remove((position.order, entity))
+        insort_right(self._positions[x, y], (position.order, entity))
+        position.x = x
+        position.y = y
+
+
 # TODO: this component is a mess, don't look there
 class Movement(Component):
 
@@ -30,7 +60,7 @@ class Movement(Component):
 
         blocker = self.owner.level.get_movement_blocker(new_x, new_y)
         if not blocker:
-            self.owner.level.move_entity(self.owner, new_x, new_y)
+            self.owner.level.position_system.move_entity(self.owner, new_x, new_y)
 
             fov = self.owner.get(FOV)
             if fov:
@@ -39,6 +69,4 @@ class Movement(Component):
             blocker.bump_function(blocker, self.owner)
 
 
-from entity import Entity
-from blocker import Blocker
 from fov import FOV

@@ -45,7 +45,7 @@ class Game(object):
                 y1 = y * 8
                 y2 = y1 + 8
 
-                for entity in self.level.get_entities_at(x, y):
+                for entity in self.level.position_system.get_entities_at(x, y):
                     renderable = entity.get(LayoutRenderable)
                     if renderable:
                         tile = renderable.tile
@@ -115,7 +115,7 @@ class Game(object):
         # set in_fov flags
         keys = set(old_lightmap).intersection(new_lightmap)
         for key in keys:
-            for entity in self.level.get_entities_at(*key):
+            for entity in self.level.position_system.get_entities_at(*key):
                 infov = entity.get(InFOV)
                 if infov:
                     infov.in_fov = key in new_lightmap
@@ -165,7 +165,7 @@ class Game(object):
             # draw all objects in this tile and remember objects saveable in memento
             x, y = key
             objects_memento = []
-            for entity in self.level.get_entities_at(*key):
+            for entity in self.level.position_system.get_entities_at(*key):
                 renderable = entity.get(Renderable)
                 if renderable:
                     gl.glPushMatrix()

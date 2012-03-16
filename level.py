@@ -1,5 +1,3 @@
-from bisect import insort_right
-from collections import defaultdict
 import random
 
 from actor import Actor, ActorSystem
@@ -10,7 +8,7 @@ from entity import Entity
 from generator import LayoutGenerator
 from item import Item
 from monster import create_random_monster
-from position import Position
+from position import Position, PositionSystem
 from render import Renderable, LayoutRenderable
 from temp import light_anim, fountain_anim, library_texes, gold_texes
 
@@ -27,12 +25,12 @@ class Level(object):
 
     def __init__(self, game, size_x, size_y):
         self.actor_system = ActorSystem(self)
+        self.position_system = PositionSystem()
         self.game = game
         self.size_x = size_x
         self.size_y = size_y
 
         self._entities = set()
-        self._positions = defaultdict(list)
 
         self._generate_level()
 
@@ -124,7 +122,7 @@ class Level(object):
         if not self._layout.in_bounds(x, y):
             return BOUNDS
 
-        for entity in self.get_entities_at(x, y):
+        for entity in self.position_system.get_entities_at(x, y):
             blocker = entity.get(Blocker)
             if blocker and blocker.blocks_sight:
                 return blocker
@@ -135,25 +133,19 @@ class Level(object):
         if not self._layout.in_bounds(x, y):
             return BOUNDS
 
-        for entity in self.get_entities_at(x, y):
+        for entity in self.position_system.get_entities_at(x, y):
             blocker = entity.get(Blocker)
             if blocker and blocker.blocks_movement:
                 return blocker
 
         return None
 
-    def get_entities_at(self, x, y):
-        if (x, y) not in self._positions:
-            return ()
-        return [entity for order, entity in self._positions[x, y]]
-
     def add_entity(self, entity):
         entity.level = self
         self._entities.add(entity)
 
-        pos = entity.get(Position)
-        if pos:
-            insort_right(self._positions[pos.x, pos.y], (pos.order, entity))
+        if entity.has(Position):
+            self.position_system.add_entity(entity)
 
         if entity.has(Actor):
             self.actor_system.add_entity(entity)
@@ -162,19 +154,11 @@ class Level(object):
         self._entities.remove(entity)
         entity.level = None
 
-        pos = entity.get(Position)
-        if pos:
-            self._positions[pos.x, pos.y].remove((pos.order, entity))
+        if entity.has(Position):
+            self.position_system.remove_entity(entity)
 
         if entity.has(Actor):
             self.actor_system.remove_entity(entity)
-
-    def move_entity(self, entity, x, y):
-        pos = entity.get(Position)
-        self._positions[pos.x, pos.y].remove((pos.order, entity))
-        insort_right(self._positions[x, y], (pos.order, entity))
-        pos.x = x
-        pos.y = y
 
     def tick(self):
         self.actor_system.update()

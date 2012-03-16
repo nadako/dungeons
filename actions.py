@@ -31,7 +31,7 @@ class PickupAction(Action):
 
     def do(self, entity):
         pos = entity.get(Position)
-        items = [e for e in entity.level.get_entities_at(pos.x, pos.y) if e is not entity and e.has(Item)]
+        items = [e for e in entity.level.position_system.get_entities_at(pos.x, pos.y) if e is not entity and e.has(Item)]
         if items:
             item = items[-1]
             entity.level.remove_entity(item)
