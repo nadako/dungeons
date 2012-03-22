@@ -111,8 +111,15 @@ class PlayLevelState(GameState):
 
     def exit(self):
         self.game.window.remove_handlers(self)
+        self._level_vlist.delete()
+        self._light_overlay.delete()
+        self._last_messages_view.delete()
 
     def on_key_press(self, sym, mod):
+        if sym == key.ESCAPE:
+            self.game.quit()
+            return pyglet.event.EVENT_HANDLED
+
         command = None
 
         if sym == key.NUM_8:

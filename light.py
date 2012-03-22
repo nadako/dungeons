@@ -50,3 +50,6 @@ class LightOverlay(object):
 
     def draw(self):
         self._vlist.draw(pyglet.gl.GL_QUADS)
+
+    def delete(self):
+        self._vlist.delete()
