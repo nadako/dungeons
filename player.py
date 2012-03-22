@@ -1,4 +1,14 @@
-from entity import Component
+from entity import Component, Entity
+from actor import Actor
+from actions import MoveAction, PickupAction, WaitAction, DropAction
+from blocker import Blocker
+from fight import Fighter
+from fov import FOV
+from inventory import Inventory
+from command import Command
+from position import Position, Movement
+from render import Renderable
+from temp import player_tex
 
 
 class Player(Component):
@@ -36,16 +46,3 @@ def player_act(player, level):
         return DropAction()
 
     return WaitAction()
-
-
-from actor import Actor
-from entity import Entity
-from actions import MoveAction, PickupAction, WaitAction, DropAction
-from blocker import Blocker
-from fight import Fighter
-from fov import FOV
-from inventory import Inventory
-from command import Command
-from position import Position, Movement
-from render import Renderable
-from temp import player_tex
