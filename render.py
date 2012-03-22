@@ -1,7 +1,9 @@
 import pyglet
 
 from entity import Component
+from generator import LayoutGenerator
 from position import Position
+from temp import floor_tex, get_wall_tex, dungeon_tex
 from util import event_property
 
 
@@ -79,6 +81,42 @@ class RenderSystem(object):
     def __init__(self):
         self._batch = pyglet.graphics.Batch()
         self._sprites = {}
+        self._level_vlist = None
+
+    def render_level(self, level):
+        vertices = []
+        tex_coords = []
+
+        for x in xrange(level.size_x):
+            for y in xrange(level.size_y):
+                x1 = x * 8
+                x2 = x1 + 8
+                y1 = y * 8
+                y2 = y1 + 8
+
+                for entity in level.position_system.get_entities_at(x, y):
+                    renderable = entity.get(LayoutRenderable)
+                    if renderable:
+                        tile = renderable.tile
+                        break
+                else:
+                    continue
+
+                # always add floor, because we wanna draw walls above floor
+                vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+                tex_coords.extend(floor_tex.tex_coords)
+
+                if tile == LayoutGenerator.TILE_WALL:
+                    # if we got wall, draw it above floor
+                    tex = get_wall_tex(level.get_wall_transition(x, y))
+                    vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
+                    tex_coords.extend(tex.tex_coords)
+
+        group = TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(Position.ORDER_FLOOR))
+        self._level_vlist = self._batch.add(len(vertices) / 2, pyglet.gl.GL_QUADS, group,
+            ('v2i/static', vertices),
+            ('t3f/statc', tex_coords),
+        )
 
     def add_entity(self, entity):
         image = entity.get(Renderable).image
@@ -103,3 +141,10 @@ class RenderSystem(object):
 
     def draw(self):
         self._batch.draw()
+
+    def dispose(self):
+        for sprite in self._sprites.values():
+            sprite.delete()
+        self._sprites.clear()
+        self._level_vlist.delete()
+        self._level_vlist = None

@@ -37,6 +37,8 @@ class Level(object):
 
         self._generate_level()
 
+        self.render_system.render_level(self)
+
     def _generate_level(self):
         self._layout = LayoutGenerator(self.size_x, self.size_y)
         self._layout.generate()

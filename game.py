@@ -113,7 +113,6 @@ class PlayLevelState(GameState):
         self._g_loop = greenlet.greenlet(self._loop)
 
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-        self._render_level()
         self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
         self._text_overlay_batch = pyglet.graphics.Batch()
         self._message_log = MessageLog()
@@ -135,7 +134,7 @@ class PlayLevelState(GameState):
 
     def exit(self):
         self.game.window.remove_handlers(self)
-        self._level_vlist.delete()
+        self.level.render_system.dispose()
         self._light_overlay.delete()
         self._last_messages_view.delete()
 
@@ -178,7 +177,7 @@ class PlayLevelState(GameState):
         with self._camera:
             gl.glPushMatrix()
             gl.glScalef(self.ZOOM, self.ZOOM, 1)
-            self._draw_layout_and_objects()
+            self.level.render_system.draw()
 
             # draw FOV overlay, hiding unexplored level tiles and adding some lighting effect
             pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
@@ -191,51 +190,9 @@ class PlayLevelState(GameState):
 
         self._draw_hud()
 
-    def _draw_layout_and_objects(self):
-        # draw level layout
-        self._level_batch.draw()
-
-        self.level.render_system.draw()
-
     def _draw_hud(self):
         self._last_messages_view.draw()
         self._player_status.draw()
-
-    def _render_level(self):
-        vertices = []
-        tex_coords = []
-
-        for x in xrange(self.level.size_x):
-            for y in xrange(self.level.size_y):
-                x1 = x * 8
-                x2 = x1 + 8
-                y1 = y * 8
-                y2 = y1 + 8
-
-                for entity in self.level.position_system.get_entities_at(x, y):
-                    renderable = entity.get(LayoutRenderable)
-                    if renderable:
-                        tile = renderable.tile
-                        break
-                else:
-                    continue
-
-                # always add floor, because we wanna draw walls above floor
-                vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
-                tex_coords.extend(floor_tex.tex_coords)
-
-                if tile == LayoutGenerator.TILE_WALL:
-                    # if we got wall, draw it above floor
-                    tex = get_wall_tex(self.level.get_wall_transition(x, y))
-                    vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
-                    tex_coords.extend(tex.tex_coords)
-
-        group = TextureGroup(dungeon_tex)
-        self._level_batch = pyglet.graphics.Batch()
-        self._level_vlist = self._level_batch.add(len(vertices) / 2, pyglet.gl.GL_QUADS, group,
-            ('v2i/static', vertices),
-            ('t3f/statc', tex_coords),
-        )
 
     def _update_player_status(self):
         item_names = []
