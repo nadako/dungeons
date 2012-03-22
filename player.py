@@ -38,7 +38,6 @@ def create_player(x, y):
 
 def player_act(player, level):
     command = level.game.get_command()
-    level.game._message_log.mark_as_seen()
 
     if command.name == Command.MOVE:
         return MoveAction(*command.data)

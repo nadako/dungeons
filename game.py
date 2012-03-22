@@ -298,7 +298,9 @@ class PlayLevelState(GameState):
             self.level.tick()
 
     def get_command(self):
-        return self._g_root.switch()
+        command = self._g_root.switch()
+        self._message_log.mark_as_seen()
+        return command
 
     def animate_damage(self, x, y, dmg):
         # hacky hack
