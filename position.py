@@ -32,7 +32,6 @@ class Position(Component):
         self.owner.event('move', old_x, old_y, self._x, self._y)
 
 
-# TODO: this component is a mess, don't look there
 class Movement(Component):
 
     COMPONENT_NAME = 'movement'
