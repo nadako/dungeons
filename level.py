@@ -6,6 +6,7 @@ from description import Description
 from door import create_door
 from entity import Entity
 from generator import LayoutGenerator
+from health import Health
 from item import Item
 from monster import create_random_monster
 from position import Position, PositionSystem
@@ -147,8 +148,12 @@ class Level(object):
         if entity.has(Position):
             self.position_system.add_entity(entity)
 
+            if entity.has(Health):
+                entity.listen('take_damage', self._on_take_damage)
+
         if entity.has(Actor):
             self.actor_system.add_entity(entity)
+
 
     def remove_entity(self, entity):
         self._entities.remove(entity)
@@ -157,8 +162,16 @@ class Level(object):
         if entity.has(Position):
             self.position_system.remove_entity(entity)
 
+            if entity.has(Health):
+                entity.unlisten('take_damage', self._on_take_damage)
+
         if entity.has(Actor):
             self.actor_system.remove_entity(entity)
+
+
+    def _on_take_damage(self, entity, amount, source):
+        pos = entity.get(Position)
+        self.game.animate_damage(pos.x, pos.y, amount)
 
     def tick(self):
         self.actor_system.update()

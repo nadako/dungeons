@@ -4,6 +4,7 @@ from actions import MoveAction, PickupAction, WaitAction, DropAction
 from blocker import Blocker
 from fight import Fighter
 from fov import FOV
+from health import Health
 from inventory import Inventory
 from command import Command
 from position import Position, Movement
@@ -29,7 +30,8 @@ def create_player(x, y):
         Movement(),
         Renderable(player_tex),
         Blocker(blocks_movement=True),
-        Fighter(100, 1, 0),
+        Health(100),
+        Fighter(1, 0),
         Inventory(),
     )
 

@@ -10,6 +10,7 @@ from command import Command
 from description import get_name
 from fight import Fighter
 from fov import FOV
+from health import Health
 from inventory import Inventory
 from item import Item
 from monster import InFOV
@@ -266,7 +267,6 @@ class PlayLevelState(GameState):
         )
 
     def _update_player_status(self):
-        fighter = self.player.get(Fighter)
         item_names = []
         for item in self.player.get(Inventory).items:
             name = get_name(item)
@@ -275,7 +275,9 @@ class PlayLevelState(GameState):
                 name += ' (%d)' % item_component.quantity
             item_names.append(name)
         inventory = ', '.join(item_names) or 'nothing'
-        text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense, inventory)
+        fighter = self.player.get(Fighter)
+        health = self.player.get(Health)
+        text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (health.health, health.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
 
     def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
