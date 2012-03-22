@@ -37,6 +37,6 @@ class ActorSystem(object):
             actor = entity.get(Actor)
             actor.energy += actor.speed
             while actor.energy > 0:
-                action = actor.act_function(entity, self._level)
+                action = actor.act_function(entity, self._level, self._level.game)
                 actor.energy -= action.cost
                 action.do(entity)

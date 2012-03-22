@@ -36,8 +36,8 @@ def create_player(x, y):
     )
 
 
-def player_act(player, level):
-    command = level.game.get_command()
+def player_act(player, level, game):
+    command = game.get_command()
 
     if command.name == Command.MOVE:
         return MoveAction(*command.data)
