@@ -2,7 +2,6 @@ import pyglet
 
 from description import Description
 from entity import Component, Entity
-from fov import FOV
 from level import Blocker
 from position import Position
 from temp import open_door_tex, closed_door_tex
@@ -45,10 +44,6 @@ def door_bump(blocker, who):
     door.get(Description).name = door_component.get_name()
 
     who.event('door_open', door)
-
-    # TODO: this doesnt belong here, fov updates should go when generic blocker changes blocks_sight
-    if who.has(FOV):
-        who.get(FOV).update_light()
 
 
 def create_door(x=0, y=0, is_open=False):

@@ -5,6 +5,7 @@ from blocker import Blocker
 from description import Description
 from door import create_door
 from entity import Entity
+from fov import FOV
 from generator import LayoutGenerator
 from health import Health
 from item import Item
@@ -151,6 +152,9 @@ class Level(object):
             if entity.has(Health):
                 entity.listen('take_damage', self._on_take_damage)
 
+            if entity.has(Blocker):
+                entity.listen('blocks_sight_change', self._on_blocks_sight_change)
+
         if entity.has(Actor):
             self.actor_system.add_entity(entity)
 
@@ -165,6 +169,9 @@ class Level(object):
             if entity.has(Health):
                 entity.unlisten('take_damage', self._on_take_damage)
 
+            if entity.has(Blocker):
+                entity.unlisten('blocks_sight_change', self._on_blocks_sight_change)
+
         if entity.has(Actor):
             self.actor_system.remove_entity(entity)
 
@@ -172,6 +179,12 @@ class Level(object):
     def _on_take_damage(self, entity, amount, source):
         pos = entity.get(Position)
         self.game.animate_damage(pos.x, pos.y, amount)
+
+    def _on_blocks_sight_change(self, entity):
+        pos = entity.get(Position)
+        fov = self.game.player.get(FOV)
+        if fov.is_in_fov(pos.x, pos.y):
+            fov.update_light()
 
     def tick(self):
         self.actor_system.update()
