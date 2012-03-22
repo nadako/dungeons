@@ -1,8 +1,12 @@
+from collections import defaultdict
+
+
 class Entity(object):
 
     def __init__(self, *components):
         self.level = None
         self._components = {}
+        self._event_handlers = defaultdict(set)
         for component in components:
             self.add(component)
 
@@ -25,6 +29,22 @@ class Entity(object):
 
     def has(self, component):
         return component.COMPONENT_NAME in self._components
+
+    def listen(self, event_name, handler):
+        self._event_handlers[event_name].add(handler)
+
+    def unlisten(self, event_name, handler):
+        if event_name in self._event_handlers:
+            self._event_handlers[event_name].remove(handler)
+
+    def event(self, event_name, *data):
+        if event_name in self._event_handlers:
+            for handler in self._event_handlers[event_name]:
+                handler(*data)
+        for componment in self._components.values():
+            method = getattr(componment, 'on_' + event_name, None)
+            if method:
+                method(*data)
 
 
 class Component(object):

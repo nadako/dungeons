@@ -4,7 +4,6 @@ from description import Description
 from entity import Component, Entity
 from fov import FOV
 from level import Blocker
-from player import is_player
 from position import Position
 from temp import open_door_tex, closed_door_tex
 
@@ -40,13 +39,12 @@ def door_bump(blocker, who):
     door_component = door.get(Door)
     door_component.is_open = not door_component.is_open
 
-    if is_player(who):
-        who.level.game.message('You open the door')
-
     blocker.blocks_sight = not door_component.is_open
     blocker.blocks_movement = not door_component.is_open
 
     door.get(Description).name = door_component.get_name()
+
+    who.event('door_open', door)
 
     # TODO: this doesnt belong here, fov updates should go when generic blocker changes blocks_sight
     if who.has(FOV):

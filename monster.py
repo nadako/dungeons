@@ -1,3 +1,17 @@
+from blocker import Blocker
+from description import Description
+from entity import Entity
+from fight import Fighter
+from actor import Actor
+from actions import MoveAction, AttackAction, WaitAction
+from fov import InFOV
+from player import is_player
+from position import Position, Movement
+from render import Renderable
+from temp import get_random_monster_params
+from util import calc_distance
+
+
 def create_random_monster(x, y):
     name, tex = get_random_monster_params()
     monster = Entity(
@@ -32,17 +46,3 @@ def monster_act(monster, level):
 def monster_bump(blocker, who):
     if is_player(who):
         who.get(Fighter).do_attack(blocker.owner)
-
-
-from blocker import Blocker
-from description import Description
-from entity import Entity
-from fight import Fighter
-from actor import Actor
-from actions import MoveAction, AttackAction, WaitAction
-from fov import InFOV
-from player import is_player
-from position import Position, Movement
-from render import Renderable
-from temp import get_random_monster_params
-from util import calc_distance

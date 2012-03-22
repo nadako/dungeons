@@ -16,7 +16,7 @@ from monster import InFOV
 from player import create_player
 from level import Level
 from light import LightOverlay
-from message import MessageLog, LastMessagesView
+from message import MessageLog, LastMessagesView, MessageLogger
 from render import Animation, TextureGroup, Renderable, LayoutRenderable, Camera
 from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
@@ -97,6 +97,7 @@ class PlayLevelState(GameState):
 
         room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
         self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
+        self.player.add(MessageLogger(self._message_log))
         self.level.add_entity(self.player)
         self.player.get(FOV).on_update = self._on_player_fov_update
         self.player.get(FOV).update_light()
@@ -265,11 +266,6 @@ class PlayLevelState(GameState):
 
     def get_command(self):
         return self._g_root.switch()
-
-    def message(self, text, color=(255, 255, 255, 255)):
-        if color:
-            text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
-        self._message_log.add_message(text)
 
     def animate_damage(self, x, y, dmg):
         # hacky hack

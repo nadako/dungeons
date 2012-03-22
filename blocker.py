@@ -1,6 +1,4 @@
 from entity import Component
-from description import get_name
-from player import is_player
 
 
 class Blocker(Component):
@@ -14,5 +12,4 @@ class Blocker(Component):
 
     @staticmethod
     def default_bump(blocker, who):
-        if is_player(who):
-            who.level.game.message('You bump into %s' % get_name(blocker.owner))
+        who.event('bump', blocker.owner)

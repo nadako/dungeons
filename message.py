@@ -1,5 +1,9 @@
 import pyglet
 
+from description import get_name
+from entity import Component
+from item import Item
+
 
 class MessageLog(object):
 
@@ -52,3 +56,46 @@ class LastMessagesView(object):
 
     def draw(self):
         self.layout.draw()
+
+
+class MessageLogger(Component):
+
+    COMPONENT_NAME = 'message_logger'
+
+    def __init__(self, message_log):
+        self._message_log = message_log
+
+    def message(self, text, color=(255, 255, 255, 255)):
+        if color:
+            text = '{color (%d, %d, %d, %d)}%s' % (color + (text,))
+        self._message_log.add_message(text)
+
+    def on_take_damage(self, damage, source):
+        self.message('%s hits you for %d hp' % (get_name(source), damage))
+
+    def on_do_damage(self, damage, target):
+        self.message('You hit %s for %d hp' % (get_name(target), damage))
+
+    def on_die(self):
+        self.message('You die')
+
+    def on_kill(self, target):
+        self.message('%s dies' % get_name(target))
+
+    def on_bump(self, entity):
+        self.message('You bump into %s' % get_name(entity))
+
+    def on_drop(self, item):
+        if item:
+            self.message('Dropped up %s' % get_name(item))
+        else:
+            self.message('Nothing to drop')
+
+    def on_pickup(self, item):
+        if item:
+            self.message('Picked up %d %s' % (item.get(Item).quantity, get_name(item)))
+        else:
+            self.message('Nothing to pickup here')
+
+    def on_door_open(self, door):
+        self.message('You open the door')
