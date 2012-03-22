@@ -2,6 +2,7 @@ import pyglet
 
 from entity import Component
 from generator import LayoutGenerator
+from light import LightOverlay
 from position import Position
 from temp import floor_tex, get_wall_tex, dungeon_tex
 from util import event_property
@@ -82,6 +83,7 @@ class RenderSystem(object):
         self._batch = pyglet.graphics.Batch()
         self._sprites = {}
         self._level_vlist = None
+        self._light_overlay = None
 
     def render_level(self, level):
         vertices = []
@@ -118,6 +120,11 @@ class RenderSystem(object):
             ('t3f/statc', tex_coords),
         )
 
+        self._light_overlay = LightOverlay(level.size_x, level.size_y, self._batch)
+
+    def update_light(self, lightmap, memory):
+        self._light_overlay.update_light(lightmap, memory)
+
     def add_entity(self, entity):
         image = entity.get(Renderable).image
         pos = entity.get(Position)
@@ -140,11 +147,17 @@ class RenderSystem(object):
         self._sprites[entity].set_position(new_x * 8, new_y * 8)
 
     def draw(self):
+        pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
+        pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
         self._batch.draw()
 
     def dispose(self):
         for sprite in self._sprites.values():
             sprite.delete()
         self._sprites.clear()
-        self._level_vlist.delete()
-        self._level_vlist = None
+        if self._level_vlist:
+            self._level_vlist.delete()
+            self._level_vlist = None
+        if self._light_overlay:
+            self._light_overlay.delete()
+            self._light_overlay = None

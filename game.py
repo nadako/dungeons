@@ -16,11 +16,8 @@ from item import Item
 from monster import InFOV
 from player import create_player
 from level import Level
-from light import LightOverlay
 from message import MessageLog, LastMessagesView, MessageLogger
-from render import Animation, TextureGroup, LayoutRenderable, Camera
-from temp import get_wall_tex, floor_tex, dungeon_tex
-from generator import LayoutGenerator
+from render import Animation, Camera
 
 
 class GameState(object):
@@ -113,7 +110,6 @@ class PlayLevelState(GameState):
         self._g_loop = greenlet.greenlet(self._loop)
 
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-        self._light_overlay = LightOverlay(self.level.size_x, self.level.size_y)
         self._text_overlay_batch = pyglet.graphics.Batch()
         self._message_log = MessageLog()
         self._last_messages_view = LastMessagesView(self._message_log, self.game.window.width, self.game.window.height)
@@ -135,7 +131,6 @@ class PlayLevelState(GameState):
     def exit(self):
         self.game.window.remove_handlers(self)
         self.level.render_system.dispose()
-        self._light_overlay.delete()
         self._last_messages_view.delete()
 
     def on_key_press(self, sym, mod):
@@ -178,11 +173,6 @@ class PlayLevelState(GameState):
             gl.glPushMatrix()
             gl.glScalef(self.ZOOM, self.ZOOM, 1)
             self.level.render_system.draw()
-
-            # draw FOV overlay, hiding unexplored level tiles and adding some lighting effect
-            pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
-            pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
-            self._light_overlay.draw()
             gl.glPopMatrix()
 
             # draw unscaledtext overlays (like dmg digits and so on)
@@ -210,7 +200,7 @@ class PlayLevelState(GameState):
 
     def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
         # update light overlay
-        self._light_overlay.update_light(new_lightmap, {})
+        self.level.render_system.update_light(new_lightmap, {})
 
         # set in_fov flags
         keys = set(old_lightmap).intersection(new_lightmap)
