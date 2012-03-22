@@ -18,7 +18,7 @@ from player import create_player
 from level import Level
 from light import LightOverlay
 from message import MessageLog, LastMessagesView, MessageLogger
-from render import Animation, TextureGroup, Renderable, LayoutRenderable, Camera
+from render import Animation, TextureGroup, LayoutRenderable, Camera
 from temp import get_wall_tex, floor_tex, dungeon_tex
 from generator import LayoutGenerator
 
