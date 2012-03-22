@@ -73,7 +73,8 @@ class Game(object):
 
     def quit(self):
         while self._states:
-            self.pop_state()
+            state = self._states.pop()
+            state.exit()
         pyglet.app.exit()
 
 
