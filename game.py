@@ -67,13 +67,37 @@ class Game(object):
             self._states[-1].resume()
 
     def run(self):
-        self.push_state(PlayLevelState(self))
+        self.push_state(MainMenuState(self))
         pyglet.app.run()
 
     def quit(self):
         while self._states:
             self.pop_state()
         pyglet.app.exit()
+
+
+class MainMenuState(GameState):
+
+    def enter(self):
+        text = 'ENTER - play, ESC - quit'
+        x = self.game.window.width / 2
+        y = self.game.window.height / 2
+        self.label = pyglet.text.Label(text, x=x, y=y, anchor_x='center', anchor_y='center')
+        self.game.window.push_handlers(self)
+
+    def exit(self):
+        self.game.window.remove_handlers(self)
+        self.label.delete()
+
+    def on_draw(self):
+        self.label.draw()
+
+    def on_key_press(self, sym, mod):
+        if sym == key.ESCAPE:
+            self.game.quit()
+        elif sym == key.ENTER:
+            self.game.change_state(PlayLevelState(self.game))
+        return pyglet.event.EVENT_HANDLED
 
 
 class PlayLevelState(GameState):
