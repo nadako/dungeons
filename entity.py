@@ -40,7 +40,7 @@ class Entity(object):
     def event(self, event_name, *data):
         if event_name in self._event_handlers:
             for handler in self._event_handlers[event_name]:
-                handler(*data)
+                handler(self, *data)
         for componment in self._components.values():
             method = getattr(componment, 'on_' + event_name, None)
             if method:
