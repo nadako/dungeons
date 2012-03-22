@@ -43,7 +43,7 @@ monster_families = [
     ('Lizard', [creature_tex[20, i] for i in xrange(2)]),
     ('Lizardman', [creature_tex[20, i] for i in xrange(2, 9)]),
     ('Ratling', [creature_tex[19, i] for i in xrange(11)]),
-    ('Minotaur', [creature_tex[18, i] for i in xrange(11)]),
+    ('Minotaur', [creature_tex[18, i] for i in xrange(10)]),
     ('Centaur', [creature_tex[17, i] for i in xrange(10)]),
     ('Satyr', [creature_tex[17, i] for i in xrange(10)]),
 ]
