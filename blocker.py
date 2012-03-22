@@ -1,4 +1,5 @@
 from entity import Component
+from util import event_property
 
 
 class Blocker(Component):
@@ -10,15 +11,7 @@ class Blocker(Component):
         self.blocks_movement = blocks_movement
         self.bump_function = bump_function or self.default_bump
 
-    @property
-    def blocks_sight(self):
-        return self._blocks_sight
-
-    @blocks_sight.setter
-    def blocks_sight(self, value):
-        if value != self._blocks_sight:
-            self._blocks_sight = value
-            self.owner.event('blocks_sight_change')
+    blocks_sight = event_property('_blocks_sight', 'blocks_sight_change')
 
     @staticmethod
     def default_bump(blocker, who):
