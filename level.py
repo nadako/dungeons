@@ -40,7 +40,7 @@ class Level(object):
         self.render_system.render_level(self)
 
     def _generate_level(self):
-        self._layout = LayoutGenerator(self.size_x, self.size_y)
+        self._layout = LayoutGenerator(self.size_x, self.size_y, max_rooms=2)
         self._layout.generate()
         self._process_layout()
         self._add_features()
@@ -187,7 +187,7 @@ class Level(object):
 
     def _on_take_damage(self, entity, amount, source):
         pos = entity.get(Position)
-        self.game.animate_damage(pos.x, pos.y, amount)
+        self.render_system.animate_damage(pos.x, pos.y, amount)
 
     def _on_blocks_sight_change(self, entity):
         pos = entity.get(Position)

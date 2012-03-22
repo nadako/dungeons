@@ -1,3 +1,4 @@
+import random
 import pyglet
 
 from entity import Component
@@ -110,6 +111,8 @@ class RenderSystem(object):
 
     def __init__(self):
         self._batch = pyglet.graphics.Batch()
+        self._text_overlay_batch = pyglet.graphics.Batch() # TODO: why doesnt it work in the main batch?
+        self._animations = set()
         self._sprites = {}
         self._level_vlist = None
         self._light_overlay = None
@@ -181,14 +184,41 @@ class RenderSystem(object):
         pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
         pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
         self._batch.draw()
+        self._text_overlay_batch.draw()
 
     def dispose(self):
         for sprite in self._sprites.values():
             sprite.delete()
         self._sprites.clear()
+
         if self._level_vlist:
             self._level_vlist.delete()
             self._level_vlist = None
+
         if self._light_overlay:
             self._light_overlay.delete()
             self._light_overlay = None
+
+        for anim in self._animations:
+            anim.cancel()
+        self._animations.clear()
+
+    def animate_damage(self, x, y, dmg):
+        # hacky hack
+        x = (x * 8 + random.randint(2, 6)) * self.zoom
+        start_y = (y * 8 + random.randint(0, 4)) * self.zoom
+
+        label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
+            x=x, y=start_y, anchor_x='center', anchor_y='bottom',
+            batch=self._text_overlay_batch)
+
+        anim = Animation(1)
+
+        def update_label(animation=anim):
+            label.y = start_y + 12 * self.zoom * animation.anim_time
+            alpha = int((1.0 - animation.anim_time / animation.duration) * 255)
+            label.color = (255, 0, 0, alpha)
+
+        anim.update = update_label
+        anim.finish = label.delete
+        self._animations.add(anim)

@@ -1,4 +1,3 @@
-import functools
 import random
 
 import greenlet
@@ -17,7 +16,7 @@ from monster import InFOV
 from player import create_player
 from level import Level
 from message import MessageLog, LastMessagesView, MessageLogger
-from render import Animation, Camera
+from render import Camera
 
 
 class GameState(object):
@@ -103,14 +102,12 @@ class PlayLevelState(GameState):
 
     DUNGEON_SIZE_X = 100
     DUNGEON_SIZE_Y = 100
-    ZOOM = 3
 
     def enter(self):
         self._g_root = greenlet.getcurrent()
         self._g_loop = greenlet.greenlet(self._loop)
 
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-        self._text_overlay_batch = pyglet.graphics.Batch()
         self._message_log = MessageLog()
         self._last_messages_view = LastMessagesView(self._message_log, self.game.window.width, self.game.window.height)
 
@@ -122,7 +119,7 @@ class PlayLevelState(GameState):
         self.player.get(FOV).update_light()
 
         self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
-        self._camera = Camera(self.game.window, self.ZOOM, self.player)
+        self._camera = Camera(self.game.window, self.level.render_system.zoom, self.player)
 
         self.game.window.push_handlers(self)
 
@@ -172,9 +169,6 @@ class PlayLevelState(GameState):
         with self._camera:
             self.level.render_system.draw()
 
-            # draw unscaledtext overlays (like dmg digits and so on)
-            self._text_overlay_batch.draw()
-
         self._draw_hud()
 
     def _draw_hud(self):
@@ -216,21 +210,3 @@ class PlayLevelState(GameState):
         command = self._g_root.switch()
         self._message_log.mark_as_seen()
         return command
-
-    def animate_damage(self, x, y, dmg):
-        # hacky hack
-        x = (x * 8 + random.randint(2, 6)) * self.ZOOM
-        start_y = (y * 8 + random.randint(0, 4)) * self.ZOOM
-
-        label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
-            x=x, y=start_y, anchor_x='center', anchor_y='bottom',
-            batch=self._text_overlay_batch)
-
-        def update_label(animation):
-            label.y = start_y + 12 * self.ZOOM * animation.anim_time
-            alpha = int((1.0 - animation.anim_time / animation.duration) * 255)
-            label.color = (255, 0, 0, alpha)
-
-        anim = Animation(0.5)
-        anim.update = functools.partial(update_label, anim)
-        anim.finish = label.delete
