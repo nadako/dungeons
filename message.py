@@ -5,7 +5,7 @@ from entity import Component
 from item import Item
 
 
-class MessageLog(object):
+class MessageLog(pyglet.event.EventDispatcher):
 
     def __init__(self, num_latest=5):
         self.num_latest = num_latest
@@ -23,27 +23,26 @@ class MessageLog(object):
         idx = len(self.messages)
         self.messages.append(text)
         self.new_message_indexes.append(idx)
-        self.on_update()
+        self.dispatch_event('on_messages_update')
 
     def mark_as_seen(self):
-        self.new_message_indexes[:] = []
-        self.on_update()
+        if self.new_message_indexes:
+            self.new_message_indexes[:] = []
+            self.dispatch_event('on_messages_update')
 
-    @staticmethod
-    def on_update():
-        raise NotImplementedError()
+MessageLog.register_event_type('on_messages_update')
 
 
 class LastMessagesView(object):
 
     def __init__(self, message_log, width, y):
         self.message_log = message_log
-        self.message_log.on_update = self.on_message_log_update
+        self.message_log.set_handler('on_messages_update', self.on_messages_update)
         self.layout = pyglet.text.layout.TextLayout(self.prepare_document(), width=width, multiline=True)
         self.layout.anchor_y = 'top'
         self.layout.y = y
 
-    def on_message_log_update(self):
+    def on_messages_update(self):
         self.layout.document = self.prepare_document()
 
     def prepare_document(self):
@@ -56,6 +55,10 @@ class LastMessagesView(object):
 
     def draw(self):
         self.layout.draw()
+
+    def delete(self):
+        self.message_log.remove_handler('on_messages_update', self.on_messages_update)
+        self.layout.delete()
 
 
 class MessageLogger(Component):
