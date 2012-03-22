@@ -98,8 +98,8 @@ class PlayLevelState(GameState):
         room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
         self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
         self.player.add(MessageLogger(self._message_log))
+        self.player.listen('fov_updated', self._on_player_fov_update)
         self.level.add_entity(self.player)
-        self.player.get(FOV).on_update = self._on_player_fov_update
         self.player.get(FOV).update_light()
 
         self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
@@ -247,7 +247,7 @@ class PlayLevelState(GameState):
         text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (fighter.health, fighter.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
 
-    def _on_player_fov_update(self, old_lightmap, new_lightmap):
+    def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
         # update light overlay
         self._light_overlay.update_light(new_lightmap, self._memento)
 

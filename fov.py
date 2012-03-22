@@ -18,16 +18,16 @@ class FOV(Component):
         self.lightmap[pos.x, pos.y] = 1
         caster = ShadowCaster(self.owner.level.get_sight_blocker, self._set_light)
         caster.calculate_light(pos.x, pos.y, self.radius)
-        self.on_update(old_lightmap, self.lightmap)
+        self.owner.event('fov_updated', old_lightmap, self.lightmap)
 
     def _set_light(self, x, y, intensity):
         self.lightmap[x, y] = intensity
 
-    def on_update(self, old_lightmap, new_lightmap):
-        pass
-
     def is_in_fov(self, x, y):
         return self.lightmap.get((x, y), 0) > 0
+
+    def on_move(self, old_x, old_y, new_x, new_y):
+        self.update_light()
 
 
 class InFOV(Component):
