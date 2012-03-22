@@ -11,7 +11,7 @@ from health import Health
 from item import Item
 from monster import create_random_monster
 from position import Position, PositionSystem
-from render import Renderable, LayoutRenderable
+from render import Renderable, LayoutRenderable, RenderSystem
 from temp import light_anim, fountain_anim, library_texes, gold_texes
 
 
@@ -28,6 +28,7 @@ class Level(object):
     def __init__(self, game, size_x, size_y):
         self.actor_system = ActorSystem(self)
         self.position_system = PositionSystem()
+        self.render_system = RenderSystem()
         self.game = game
         self.size_x = size_x
         self.size_y = size_y
@@ -70,14 +71,14 @@ class Level(object):
                 ], random.randint(1, 4))
                 for x, y in coords:
                     self.add_entity(Entity(
-                        Renderable(light_anim, True),
+                        Renderable(light_anim),
                         Blocker(blocks_movement=True),
                         Description('Light'),
                         Position(x, y, Position.ORDER_FEATURES)
                     ))
             elif feature == 'fountain':
                 self.add_entity(Entity(
-                    Renderable(fountain_anim, True),
+                    Renderable(fountain_anim),
                     Blocker(blocks_movement=True),
                     Description('Fountain'),
                     Position(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2, Position.ORDER_FEATURES)
@@ -92,7 +93,7 @@ class Level(object):
                     if x == room.x + room.grid.size_x - 2 and self._layout.grid[x + 1, y - 1] != LayoutGenerator.TILE_WALL:
                         continue
                     self.add_entity(Entity(
-                        Renderable(random.choice(library_texes), True),
+                        Renderable(random.choice(library_texes)),
                         Blocker(blocks_movement=True),
                         Description('Bookshelf'),
                         Position(x, y - 1, Position.ORDER_FEATURES)
@@ -155,6 +156,9 @@ class Level(object):
             if entity.has(Blocker):
                 entity.listen('blocks_sight_change', self._on_blocks_sight_change)
 
+            if entity.has(Renderable):
+                self.render_system.add_entity(entity)
+
         if entity.has(Actor):
             self.actor_system.add_entity(entity)
 
@@ -171,6 +175,9 @@ class Level(object):
 
             if entity.has(Blocker):
                 entity.unlisten('blocks_sight_change', self._on_blocks_sight_change)
+
+            if entity.has(Renderable):
+                self.render_system.remove_entity(entity)
 
         if entity.has(Actor):
             self.actor_system.remove_entity(entity)

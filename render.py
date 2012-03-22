@@ -2,6 +2,7 @@ import pyglet
 
 from entity import Component
 from position import Position
+from util import event_property
 
 
 class TextureGroup(pyglet.graphics.TextureGroup):
@@ -41,12 +42,10 @@ class Renderable(Component):
 
     COMPONENT_NAME = 'renderable'
 
-    def __init__(self, tex, save_memento=False):
-        self.sprite = pyglet.sprite.Sprite(tex)
-        self.save_memento = save_memento
+    def __init__(self, image):
+        self._image = image
 
-    def get_memento_sprite(self):
-        return self.sprite
+    image = event_property('_image', 'image_change')
 
 
 class LayoutRenderable(Component):
@@ -73,3 +72,34 @@ class Camera(object):
 
     def __exit__(self, *exc):
         pyglet.gl.glPopMatrix()
+
+
+class RenderSystem(object):
+
+    def __init__(self):
+        self._batch = pyglet.graphics.Batch()
+        self._sprites = {}
+
+    def add_entity(self, entity):
+        image = entity.get(Renderable).image
+        pos = entity.get(Position)
+        group = pyglet.graphics.OrderedGroup(pos.order)
+        sprite = pyglet.sprite.Sprite(image, pos.x * 8, pos.y * 8, batch=self._batch, group=group)
+        self._sprites[entity] = sprite
+        entity.listen('image_change', self._on_image_change)
+        entity.listen('move', self._on_move)
+
+    def remove_entity(self, entity):
+        sprite = self._sprites.pop(entity)
+        sprite.delete()
+        entity.unlisten('image_change', self._on_image_change)
+        entity.unlisten('move', self._on_move)
+
+    def _on_image_change(self, entity):
+        self._sprites[entity].image = entity.get(Renderable).image
+
+    def _on_move(self, entity, old_x, old_y, new_x, new_y):
+        self._sprites[entity].set_position(new_x * 8, new_y * 8)
+
+    def draw(self):
+        self._batch.draw()

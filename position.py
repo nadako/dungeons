@@ -26,10 +26,11 @@ class Position(Component):
     order = property(lambda self:self._order)
 
     def move(self, x, y):
-        old_x, old_y = self._x, self._y
-        self._x = x
-        self._y = y
-        self.owner.event('move', old_x, old_y, self._x, self._y)
+        if x != self._x or y != self._y:
+            old_x, old_y = self._x, self._y
+            self._x = x
+            self._y = y
+            self.owner.event('move', old_x, old_y, self._x, self._y)
 
 
 class Movement(Component):

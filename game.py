@@ -119,8 +119,6 @@ class PlayLevelState(GameState):
         self._message_log = MessageLog()
         self._last_messages_view = LastMessagesView(self._message_log, self.game.window.width, self.game.window.height)
 
-        self._memento = {}
-
         room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
         self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
         self.player.add(MessageLogger(self._message_log))
@@ -197,35 +195,7 @@ class PlayLevelState(GameState):
         # draw level layout
         self._level_batch.draw()
 
-        # prepare a collection of remembered objects to draw (we will remove parts that are currently in FOV)
-        memento_to_draw = self._memento.copy()
-
-        for key in self.player.get(FOV).lightmap:
-            # remove from memento to draw as we're going to update it and draw current contents in this loop
-            memento_to_draw.pop(key, None)
-
-            # draw all objects in this tile and remember objects saveable in memento
-            x, y = key
-            objects_memento = []
-            for entity in self.level.position_system.get_entities_at(*key):
-                renderable = entity.get(Renderable)
-                if renderable:
-                    gl.glPushMatrix()
-                    gl.glTranslatef(x * 8, y * 8, 0)
-                    renderable.sprite.draw()
-                    gl.glPopMatrix()
-                    if renderable.save_memento:
-                        objects_memento.append(renderable.get_memento_sprite())
-            self._memento[key] = objects_memento
-
-        # draw remembered objects outside of FOV
-        for key, sprites in memento_to_draw.items():
-            x, y = key
-            for sprite in sprites:
-                gl.glPushMatrix()
-                gl.glTranslatef(x * 8, y * 8, 0)
-                sprite.draw()
-                gl.glPopMatrix()
+        self.level.render_system.draw()
 
     def _draw_hud(self):
         self._last_messages_view.draw()
@@ -283,7 +253,7 @@ class PlayLevelState(GameState):
 
     def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
         # update light overlay
-        self._light_overlay.update_light(new_lightmap, self._memento)
+        self._light_overlay.update_light(new_lightmap, {})
 
         # set in_fov flags
         keys = set(old_lightmap).intersection(new_lightmap)
