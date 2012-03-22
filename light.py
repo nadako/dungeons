@@ -1,16 +1,12 @@
 import pyglet
 
-from position import Position
-
 
 class LightOverlay(object):
 
-    def __init__(self, size_x, size_y, batch):
+    def __init__(self, size_x, size_y, batch, group):
         self.size_x = size_x
         self.size_y = size_y
-        self._init_vlist(batch)
 
-    def _init_vlist(self, batch):
         vertices = []
         colors = []
 
@@ -24,7 +20,6 @@ class LightOverlay(object):
                 vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
                 colors.extend((c * 4))
 
-        group = pyglet.graphics.OrderedGroup(Position.ORDER_PLAYER + 1)
         self._vlist = batch.add(self.size_x * self.size_y * 4, pyglet.gl.GL_QUADS, group,
             ('v2i', vertices),
             ('c4B', colors)

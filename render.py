@@ -16,6 +16,33 @@ class TextureGroup(pyglet.graphics.TextureGroup):
         pyglet.gl.glTexParameteri(self.texture.target, pyglet.gl.GL_TEXTURE_MAG_FILTER, pyglet.gl.GL_NEAREST)
 
 
+class ZoomGroup(pyglet.graphics.Group):
+
+    def __init__(self, zoom, parent=None):
+        super(ZoomGroup, self).__init__(parent)
+        self.zoom = zoom
+
+    def set_state(self):
+        pyglet.gl.glPushMatrix()
+        pyglet.gl.glScalef(self.zoom, self.zoom, 1)
+
+    def unset_state(self):
+        pyglet.gl.glPopMatrix()
+
+    def __eq__(self, other):
+        return (
+            self.__class__ is other.__class__ and
+            self.zoom == other.zoom and
+            self.parent == other.parent
+        )
+
+    def __hash__(self):
+        return hash((self.zoom, self.parent))
+
+    def __repr__(self):
+        return '%s(zoom=%d)' % (self.__class__.__name__, self.zoom)
+
+
 class Animation(object):
 
     def __init__(self, duration):
@@ -79,11 +106,14 @@ class Camera(object):
 
 class RenderSystem(object):
 
+    zoom = 3
+
     def __init__(self):
         self._batch = pyglet.graphics.Batch()
         self._sprites = {}
         self._level_vlist = None
         self._light_overlay = None
+        self._zoom_group = ZoomGroup(self.zoom)
 
     def render_level(self, level):
         vertices = []
@@ -114,13 +144,14 @@ class RenderSystem(object):
                     vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
                     tex_coords.extend(tex.tex_coords)
 
-        group = TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(Position.ORDER_FLOOR))
+        group = TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(Position.ORDER_FLOOR, self._zoom_group))
         self._level_vlist = self._batch.add(len(vertices) / 2, pyglet.gl.GL_QUADS, group,
             ('v2i/static', vertices),
             ('t3f/statc', tex_coords),
         )
 
-        self._light_overlay = LightOverlay(level.size_x, level.size_y, self._batch)
+        group = pyglet.graphics.OrderedGroup(Position.ORDER_PLAYER + 1, self._zoom_group)
+        self._light_overlay = LightOverlay(level.size_x, level.size_y, self._batch, group)
 
     def update_light(self, lightmap, memory):
         self._light_overlay.update_light(lightmap, memory)
@@ -128,7 +159,7 @@ class RenderSystem(object):
     def add_entity(self, entity):
         image = entity.get(Renderable).image
         pos = entity.get(Position)
-        group = pyglet.graphics.OrderedGroup(pos.order)
+        group = pyglet.graphics.OrderedGroup(pos.order, self._zoom_group)
         sprite = pyglet.sprite.Sprite(image, pos.x * 8, pos.y * 8, batch=self._batch, group=group)
         self._sprites[entity] = sprite
         entity.listen('image_change', self._on_image_change)

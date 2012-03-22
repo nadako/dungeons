@@ -170,10 +170,7 @@ class PlayLevelState(GameState):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 
         with self._camera:
-            gl.glPushMatrix()
-            gl.glScalef(self.ZOOM, self.ZOOM, 1)
             self.level.render_system.draw()
-            gl.glPopMatrix()
 
             # draw unscaledtext overlays (like dmg digits and so on)
             self._text_overlay_batch.draw()
