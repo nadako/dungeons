@@ -5,11 +5,13 @@ from blocker import Blocker
 from description import Description
 from door import create_door
 from entity import Entity
-from fov import FOV
+from fov import FOV, InFOV
 from generator import LayoutGenerator
 from health import Health
 from item import Item
+from message import MessageLogger
 from monster import create_random_monster
+from player import create_player
 from position import Position, PositionSystem
 from render import Renderable, LayoutRenderable, RenderSystem
 from temp import light_anim, fountain_anim, library_texes, gold_texes
@@ -38,6 +40,7 @@ class Level(object):
         self._generate_level()
 
         self.render_system.render_level(self)
+        self.player.get(FOV).update_light()
 
     def _generate_level(self):
         self._layout = LayoutGenerator(self.size_x, self.size_y, max_rooms=2)
@@ -46,6 +49,7 @@ class Level(object):
         self._add_features()
         self._add_monsters()
         self._add_items()
+        self._add_player()
 
     def _process_layout(self):
         grid = self._layout.grid
@@ -123,6 +127,25 @@ class Level(object):
                     Item('gold', quantity=random.randint(1, 50)),
                 ))
 
+    def _add_player(self):
+        room = random.choice(self._layout.rooms) # TODO: refactor this to stairs up/down
+        self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
+        self.player.add(MessageLogger(self.game.message_log))
+        self.player.listen('fov_updated', self._on_player_fov_update)
+        self.add_entity(self.player)
+
+    def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
+        # update light overlay
+        self.render_system.update_light(new_lightmap, {})
+
+        # set in_fov flags
+        keys = set(old_lightmap).intersection(new_lightmap)
+        for key in keys:
+            for entity in self.position_system.get_entities_at(*key):
+                infov = entity.get(InFOV)
+                if infov:
+                    infov.in_fov = key in new_lightmap
+
     def get_sight_blocker(self, x, y):
         if not self._layout.in_bounds(x, y):
             return BOUNDS
@@ -191,7 +214,7 @@ class Level(object):
 
     def _on_blocks_sight_change(self, entity):
         pos = entity.get(Position)
-        fov = self.game.player.get(FOV)
+        fov = self.player.get(FOV)
         if fov.is_in_fov(pos.x, pos.y):
             fov.update_light()
 

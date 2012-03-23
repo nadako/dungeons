@@ -1,5 +1,3 @@
-import random
-
 import greenlet
 import pyglet
 from pyglet.window import key
@@ -8,14 +6,11 @@ from pyglet import gl
 from command import Command
 from description import get_name
 from fight import Fighter
-from fov import FOV
 from health import Health
 from inventory import Inventory
 from item import Item
-from monster import InFOV
-from player import create_player
 from level import Level
-from message import MessageLog, LastMessagesView, MessageLogger
+from message import MessageLog, LastMessagesView
 from render import Camera
 
 
@@ -107,19 +102,13 @@ class PlayLevelState(GameState):
         self._g_root = greenlet.getcurrent()
         self._g_loop = greenlet.greenlet(self._loop)
 
-        self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-        self._message_log = MessageLog()
-        self._last_messages_view = LastMessagesView(self._message_log, self.game.window.width, self.game.window.height)
+        self.message_log = MessageLog()
+        self._last_messages_view = LastMessagesView(self.message_log, self.game.window.width, self.game.window.height)
 
-        room = random.choice(self.level._layout.rooms) # TODO: refactor this to stairs up/down
-        self.player = create_player(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2)
-        self.player.add(MessageLogger(self._message_log))
-        self.player.listen('fov_updated', self._on_player_fov_update)
-        self.level.add_entity(self.player)
-        self.player.get(FOV).update_light()
+        self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
 
         self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
-        self._camera = Camera(self.game.window, self.level.render_system.zoom, self.player)
+        self._camera = Camera(self.game.window, self.level.render_system.zoom, self.level.player)
 
         self.game.window.push_handlers(self)
 
@@ -177,29 +166,17 @@ class PlayLevelState(GameState):
 
     def _update_player_status(self):
         item_names = []
-        for item in self.player.get(Inventory).items:
+        for item in self.level.player.get(Inventory).items:
             name = get_name(item)
             item_component = item.get(Item)
             if item_component.quantity > 1:
                 name += ' (%d)' % item_component.quantity
             item_names.append(name)
         inventory = ', '.join(item_names) or 'nothing'
-        fighter = self.player.get(Fighter)
-        health = self.player.get(Health)
+        fighter = self.level.player.get(Fighter)
+        health = self.level.player.get(Health)
         text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (health.health, health.max_health, fighter.attack, fighter.defense, inventory)
         self._player_status.text = text
-
-    def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
-        # update light overlay
-        self.level.render_system.update_light(new_lightmap, {})
-
-        # set in_fov flags
-        keys = set(old_lightmap).intersection(new_lightmap)
-        for key in keys:
-            for entity in self.level.position_system.get_entities_at(*key):
-                infov = entity.get(InFOV)
-                if infov:
-                    infov.in_fov = key in new_lightmap
 
     def _loop(self):
         while True:
@@ -208,5 +185,5 @@ class PlayLevelState(GameState):
 
     def get_command(self):
         command = self._g_root.switch()
-        self._message_log.mark_as_seen()
+        self.message_log.mark_as_seen()
         return command
