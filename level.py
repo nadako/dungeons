@@ -5,7 +5,7 @@ from blocker import Blocker
 from description import Description
 from door import create_door
 from entity import Entity
-from fov import FOV, InFOV
+from fov import FOV
 from generator import LayoutGenerator
 from health import Health
 from item import Item
@@ -28,10 +28,10 @@ BOUNDS = BOUNDS()
 class Level(object):
 
     def __init__(self, game, size_x, size_y):
+        self.game = game
         self.actor_system = ActorSystem(self)
         self.position_system = PositionSystem()
-        self.render_system = RenderSystem(game.game.window)
-        self.game = game
+        self.render_system = RenderSystem(self)
         self.size_x = size_x
         self.size_y = size_y
 
@@ -44,7 +44,7 @@ class Level(object):
         self.player.get(FOV).update_light()
 
     def _generate_level(self):
-        self._layout = LayoutGenerator(self.size_x, self.size_y, max_rooms=2)
+        self._layout = LayoutGenerator(self.size_x, self.size_y, max_rooms=30)
         self._layout.generate()
         self._process_layout()
         self._add_features()
@@ -78,14 +78,14 @@ class Level(object):
                 ], random.randint(1, 4))
                 for x, y in coords:
                     self.add_entity(Entity(
-                        Renderable(light_anim),
+                        Renderable(light_anim, memorable=True),
                         Blocker(blocks_movement=True),
                         Description('Light'),
                         Position(x, y, Position.ORDER_FEATURES)
                     ))
             elif feature == 'fountain':
                 self.add_entity(Entity(
-                    Renderable(fountain_anim),
+                    Renderable(fountain_anim, memorable=True),
                     Blocker(blocks_movement=True),
                     Description('Fountain'),
                     Position(room.x + room.grid.size_x / 2, room.y + room.grid.size_y / 2, Position.ORDER_FEATURES)
@@ -100,7 +100,7 @@ class Level(object):
                     if x == room.x + room.grid.size_x - 2 and self._layout.grid[x + 1, y - 1] != LayoutGenerator.TILE_WALL:
                         continue
                     self.add_entity(Entity(
-                        Renderable(random.choice(library_texes)),
+                        Renderable(random.choice(library_texes), memorable=True),
                         Blocker(blocks_movement=True),
                         Description('Bookshelf'),
                         Position(x, y - 1, Position.ORDER_FEATURES)
@@ -136,16 +136,7 @@ class Level(object):
         self.add_entity(self.player)
 
     def _on_player_fov_update(self, player, old_lightmap, new_lightmap):
-        # update light overlay
-        self.render_system.update_light(new_lightmap, {})
-
-        # set in_fov flags
-        keys = set(old_lightmap).intersection(new_lightmap)
-        for key in keys:
-            for entity in self.position_system.get_entities_at(*key):
-                infov = entity.get(InFOV)
-                if infov:
-                    infov.in_fov = key in new_lightmap
+        self.render_system.update_light(old_lightmap, new_lightmap)
 
     def get_sight_blocker(self, x, y):
         if not self._layout.in_bounds(x, y):

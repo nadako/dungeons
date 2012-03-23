@@ -38,7 +38,7 @@ def create_door(x=0, y=0, is_open=False):
     return Entity(
         door_component,
         Position(x, y, Position.ORDER_FEATURES),
-        Renderable(get_door_tex(is_open)),
+        Renderable(get_door_tex(is_open), memorable=True),
         Blocker(not is_open, not is_open, door_bump),
         Description(door_component.get_name())
     )

@@ -1,7 +1,10 @@
+import collections
 import random
+
 import pyglet
 
 from entity import Component
+from fov import InFOV
 from generator import LayoutGenerator
 from light import LightOverlay
 from position import Position
@@ -105,8 +108,9 @@ class Renderable(Component):
 
     COMPONENT_NAME = 'renderable'
 
-    def __init__(self, image):
+    def __init__(self, image, memorable=False):
         self._image = image
+        self.memorable = memorable
 
     image = event_property('_image', 'image_change')
 
@@ -123,16 +127,17 @@ class RenderSystem(object):
 
     zoom = 3
 
-    def __init__(self, window):
-        self._window = window
+    def __init__(self, level):
+        self._level = level
         self._batch = pyglet.graphics.Batch()
         self._text_overlay_batch = pyglet.graphics.Batch() # TODO: why doesnt it work in the main batch?
         self._animations = set()
         self._sprites = {}
         self._level_vlist = None
         self._light_overlay = None
-        self.camera = CameraGroup(self._window, self.zoom)
+        self.camera = CameraGroup(self._level.game.game.window, self.zoom)
         self._zoom_group = ZoomGroup(self.zoom, self.camera)
+        self._memory = collections.defaultdict(list)
 
     def render_level(self, level):
         vertices = []
@@ -172,8 +177,48 @@ class RenderSystem(object):
         group = pyglet.graphics.OrderedGroup(Position.ORDER_PLAYER + 1, self._zoom_group)
         self._light_overlay = LightOverlay(level.size_x, level.size_y, self._batch, group)
 
-    def update_light(self, lightmap, memory):
-        self._light_overlay.update_light(lightmap, memory)
+    def update_light(self, old_lightmap, new_lightmap):
+        # for all changed cells
+        for key in set(old_lightmap).union(new_lightmap):
+            lit = key in new_lightmap
+            memory = self._memory[key]
+
+            # if cell is lit, add it to memory and clear all memory sprites, if there are any
+            if lit:
+                for sprite in memory:
+                    sprite.delete()
+                memory[:] = []
+
+            # for every entity in cell
+            for entity in self._level.position_system.get_entities_at(*key):
+                # set in_fov flag
+                # TODO: this doesnt belong to rendering, but i don't want to loop twice
+                infov = entity.get(InFOV)
+                if infov:
+                    infov.in_fov = key in new_lightmap
+
+                # if renderable, manage sprites/memory
+                renderable = entity.get(Renderable)
+                if not renderable:
+                    continue
+
+                # if object is lit, show its sprite
+                sprite = self._sprites[entity]
+                if lit:
+                    sprite.visible = True
+                else:
+                    sprite.visible = False
+
+                    # if it's memorable, add its current image to the memory
+                    if renderable.memorable:
+                        pos = entity.get(Position)
+                        group = pyglet.graphics.OrderedGroup(pos.order, self._zoom_group)
+                        sprite = pyglet.sprite.Sprite(renderable.image, pos.x * 8, pos.y * 8, batch=self._batch, group=group)
+                        memory.append(sprite)
+
+
+        # update light overlay
+        self._light_overlay.update_light(new_lightmap, self._memory)
 
     def add_entity(self, entity):
         image = entity.get(Renderable).image
@@ -206,6 +251,11 @@ class RenderSystem(object):
         for sprite in self._sprites.values():
             sprite.delete()
         self._sprites.clear()
+
+        for sprites in self._memory.values():
+            for sprite in sprites:
+                sprite.delete()
+        self._memory.clear()
 
         if self._level_vlist:
             self._level_vlist.delete()
