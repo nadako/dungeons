@@ -130,7 +130,6 @@ class RenderSystem(object):
     def __init__(self, level):
         self._level = level
         self._batch = pyglet.graphics.Batch()
-        self._text_overlay_batch = pyglet.graphics.Batch() # TODO: why doesnt it work in the main batch?
         self._animations = set()
         self._sprites = {}
         self._level_vlist = None
@@ -245,7 +244,6 @@ class RenderSystem(object):
         pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
         pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
         self._batch.draw()
-        self._text_overlay_batch.draw()
 
     def dispose(self):
         for sprite in self._sprites.values():
@@ -276,7 +274,7 @@ class RenderSystem(object):
 
         label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
             x=x, y=start_y, anchor_x='center', anchor_y='bottom',
-            batch=self._text_overlay_batch, group=self.camera)
+            batch=self._batch, group=self.camera)
 
         anim = Animation(1)
 
