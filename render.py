@@ -7,6 +7,7 @@ from entity import Component
 from fov import InFOV
 from generator import LayoutGenerator
 from light import LightOverlay
+from message import LastMessagesView
 from position import Position
 from temp import floor_tex, get_wall_tex, dungeon_tex
 from util import event_property
@@ -129,12 +130,14 @@ class RenderSystem(object):
 
     def __init__(self, level):
         self._level = level
+        self._window = level.game.game.window
         self._batch = pyglet.graphics.Batch()
         self._animations = set()
         self._sprites = {}
         self._level_vlist = None
         self._light_overlay = None
-        self.camera = CameraGroup(self._level.game.game.window, self.zoom)
+        self._last_messages_view = LastMessagesView(level.game.message_log, self._window.width, self._window.height, batch=self._batch)
+        self.camera = CameraGroup(self._window, self.zoom)
         self._zoom_group = ZoomGroup(self.zoom, self.camera)
         self._memory = collections.defaultdict(list)
 
@@ -262,6 +265,8 @@ class RenderSystem(object):
         if self._light_overlay:
             self._light_overlay.delete()
             self._light_overlay = None
+
+        self._last_messages_view.delete()
 
         for anim in self._animations:
             anim.cancel()

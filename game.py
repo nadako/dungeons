@@ -10,7 +10,7 @@ from health import Health
 from inventory import Inventory
 from item import Item
 from level import Level
-from message import MessageLog, LastMessagesView
+from message import MessageLog
 
 
 class GameState(object):
@@ -102,7 +102,6 @@ class PlayLevelState(GameState):
         self._g_loop = greenlet.greenlet(self._loop)
 
         self.message_log = MessageLog()
-        self._last_messages_view = LastMessagesView(self.message_log, self.game.window.width, self.game.window.height)
 
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
 
@@ -115,7 +114,6 @@ class PlayLevelState(GameState):
     def exit(self):
         self.game.window.remove_handlers(self)
         self.level.render_system.dispose()
-        self._last_messages_view.delete()
 
     def on_key_press(self, sym, mod):
         if sym == key.ESCAPE:
@@ -156,7 +154,6 @@ class PlayLevelState(GameState):
         self._draw_hud()
 
     def _draw_hud(self):
-        self._last_messages_view.draw()
         self._player_status.draw()
 
     def _update_player_status(self):
