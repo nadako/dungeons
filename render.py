@@ -59,9 +59,8 @@ class CameraGroup(pyglet.graphics.Group):
 
     def set_state(self):
         if self.focus is not None:
-            pos = self.focus.get(Position)
-            cam_x = self.window.width / 2 - pos.x * 8 * self.zoom_factor
-            cam_y = self.window.height / 2 - pos.y * 8 * self.zoom_factor
+            cam_x = self.window.width / 2 - self.focus.x * self.zoom_factor
+            cam_y = self.window.height / 2 - self.focus.y * self.zoom_factor
             pyglet.gl.gl.glPushMatrix()
             pyglet.gl.gl.glTranslatef(cam_x, cam_y, 0)
 
@@ -81,29 +80,29 @@ class CameraGroup(pyglet.graphics.Group):
         return hash((self.window, self.zoom_factor, self.parent))
 
 
-class Animation(object):
+class Animation(pyglet.event.EventDispatcher):
 
     def __init__(self, duration):
-        self.anim_time = 0.0
+        self.elapsed = 0.0
         self.duration = duration
-        pyglet.clock.schedule(self.animate)
+        pyglet.clock.schedule(self._animate)
 
     def cancel(self):
-        pyglet.clock.unschedule(self.animate)
-        self.finish()
+        pyglet.clock.unschedule(self._animate)
+        self.dispatch_event('on_finish', self)
 
-    def animate(self, dt):
-        self.anim_time += dt
-        if self.anim_time > self.duration:
+    def get_elapsed_ratio(self):
+        return self.elapsed / self.duration
+
+    def _animate(self, dt):
+        self.elapsed += dt
+        if self.elapsed > self.duration:
             self.cancel()
-            return
-        self.update()
+        else:
+            self.dispatch_event('on_update', self, dt)
 
-    def finish(self):
-        raise NotImplementedError()
-
-    def update(self):
-        raise NotImplementedError()
+Animation.register_event_type('on_update')
+Animation.register_event_type('on_finish')
 
 
 class Renderable(Component):
@@ -148,8 +147,9 @@ class RenderSystem(object):
         self._memory = collections.defaultdict(list)
 
     def update_player(self):
-        self._digits_group.focus = self._level.player
-        self._level_group.parent.focus = self._level.player
+        player_sprite = self._sprites[self._level.player]
+        self._digits_group.focus = player_sprite
+        self._level_group.parent.focus = player_sprite
         self._hud.player = self._level.player
 
     def render_level(self):
@@ -252,7 +252,31 @@ class RenderSystem(object):
         self._sprites[entity].image = entity.get(Renderable).image
 
     def _on_move(self, entity, old_x, old_y, new_x, new_y):
-        self._sprites[entity].set_position(new_x * 8, new_y * 8)
+        sprite = self._sprites[entity]
+        target_x = new_x * 8
+        target_y = new_y * 8
+
+        if not sprite.visible:
+            # don't animate invisible sprites
+            sprite.set_position(target_x, target_y)
+        else:
+            start_x = sprite.x
+            start_y = sprite.y
+
+            anim = Animation(0.25)
+
+            @anim.event
+            def on_update(animation, dt, sprite=sprite, dx=(target_x - start_x), dy=(target_y - start_y)):
+                ratio = animation.get_elapsed_ratio()
+                x = round(start_x + dx * ratio)
+                y = round(start_y + dy * ratio)
+                sprite.set_position(x, y)
+
+            @anim.event
+            def on_finish(animation, sprite=sprite):
+                sprite.set_position(target_x, target_y)
+
+            self.add_animation(anim)
 
     def draw(self):
         self._window.clear()
@@ -261,6 +285,10 @@ class RenderSystem(object):
         self._batch.draw()
 
     def dispose(self):
+        for anim in list(self._animations):
+            anim.cancel()
+        self._animations.clear()
+
         for sprite in self._sprites.values():
             sprite.delete()
         self._sprites.clear()
@@ -281,12 +309,11 @@ class RenderSystem(object):
         self._last_messages_view.delete()
         self._hud.delete()
 
-        for anim in self._animations:
-            anim.cancel()
-        self._animations.clear()
+    def add_animation(self, animation):
+        self._animations.add(animation)
+        animation.push_handlers(on_finish=self._animations.remove)
 
     def animate_damage(self, x, y, dmg):
-        # hacky hack
         x = (x * 8 + random.randint(2, 6)) * self.zoom
         start_y = (y * 8 + random.randint(0, 4)) * self.zoom
 
@@ -296,11 +323,14 @@ class RenderSystem(object):
 
         anim = Animation(1)
 
-        def update_label(animation=anim):
-            label.y = start_y + 12 * self.zoom * animation.anim_time
-            alpha = int((1.0 - animation.anim_time / animation.duration) * 255)
-            label.color = (255, 0, 0, alpha)
+        @anim.event
+        def on_update(animation, dt, label=label, start_y=start_y, zoom=self.zoom):
+            ratio = animation.get_elapsed_ratio()
+            label.y = start_y + 12 * ratio * zoom
+            label.color = (255, 0, 0, int((1.0 - ratio) * 255))
 
-        anim.update = update_label
-        anim.finish = label.delete
-        self._animations.add(anim)
+        @anim.event
+        def on_finish(animation, label=label):
+            label.delete()
+
+        self.add_animation(anim)
