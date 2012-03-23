@@ -3,6 +3,8 @@ from entity import Component
 
 class Item(Component):
 
+    COMPONENT_NAME = 'item'
+
     def __init__(self, type_name, stackable=True, quantity=1):
         self.type_name = type_name
         self.stackable = stackable

@@ -8,6 +8,8 @@ from temp import open_door_tex, closed_door_tex
 
 class Door(Component):
 
+    COMPONENT_NAME = 'door'
+
     def __init__(self, is_open=False):
         self.is_open = is_open
 
