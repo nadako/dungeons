@@ -85,7 +85,7 @@ class Animation(pyglet.event.EventDispatcher):
     def __init__(self, duration):
         self.elapsed = 0.0
         self.duration = duration
-        pyglet.clock.schedule(self._animate)
+        pyglet.clock.schedule_interval(self._animate, 0.001)
 
     def cancel(self):
         pyglet.clock.unschedule(self._animate)
