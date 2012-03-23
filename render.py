@@ -285,9 +285,9 @@ class RenderSystem(object):
         self._batch.draw()
 
     def dispose(self):
-        for anim in list(self._animations):
+        for anim in tuple(self._animations):
             anim.cancel()
-        self._animations.clear()
+        assert not self._animations
 
         for sprite in self._sprites.values():
             sprite.delete()
