@@ -6,6 +6,7 @@ import pyglet
 from entity import Component
 from fov import InFOV
 from generator import LayoutGenerator
+from hud import HUD
 from light import LightOverlay
 from message import LastMessagesView
 from position import Position
@@ -128,6 +129,10 @@ class RenderSystem(object):
 
     zoom = 3
 
+    GROUP_LEVEL = pyglet.graphics.OrderedGroup(0)
+    GROUP_DIGITS = pyglet.graphics.OrderedGroup(1)
+    GROUP_HUD = pyglet.graphics.OrderedGroup(2)
+
     def __init__(self, level):
         self._level = level
         self._window = level.game.game.window
@@ -136,23 +141,29 @@ class RenderSystem(object):
         self._sprites = {}
         self._level_vlist = None
         self._light_overlay = None
-        self._last_messages_view = LastMessagesView(level.game.message_log, self._window.width, self._window.height, batch=self._batch)
-        self.camera = CameraGroup(self._window, self.zoom)
-        self._zoom_group = ZoomGroup(self.zoom, self.camera)
+        self._last_messages_view = LastMessagesView(level.game.message_log, self._window.width, self._window.height, batch=self._batch, group=self.GROUP_HUD)
+        self._hud = HUD(batch=self._batch, group=self.GROUP_HUD)
+        self._level_group = ZoomGroup(self.zoom, CameraGroup(self._window, self.zoom, self.GROUP_LEVEL))
+        self._digits_group = CameraGroup(self._window, self.zoom, self.GROUP_DIGITS)
         self._memory = collections.defaultdict(list)
 
-    def render_level(self, level):
+    def update_player(self):
+        self._digits_group.focus = self._level.player
+        self._level_group.parent.focus = self._level.player
+        self._hud.player = self._level.player
+
+    def render_level(self):
         vertices = []
         tex_coords = []
 
-        for x in xrange(level.size_x):
-            for y in xrange(level.size_y):
+        for x in xrange(self._level.size_x):
+            for y in xrange(self._level.size_y):
                 x1 = x * 8
                 x2 = x1 + 8
                 y1 = y * 8
                 y2 = y1 + 8
 
-                for entity in level.position_system.get_entities_at(x, y):
+                for entity in self._level.position_system.get_entities_at(x, y):
                     renderable = entity.get(LayoutRenderable)
                     if renderable:
                         tile = renderable.tile
@@ -166,18 +177,18 @@ class RenderSystem(object):
 
                 if tile == LayoutGenerator.TILE_WALL:
                     # if we got wall, draw it above floor
-                    tex = get_wall_tex(level.get_wall_transition(x, y))
+                    tex = get_wall_tex(self._level.get_wall_transition(x, y))
                     vertices.extend((x1, y1, x2, y1, x2, y2, x1, y2))
                     tex_coords.extend(tex.tex_coords)
 
-        group = TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(Position.ORDER_FLOOR, self._zoom_group))
+        group = TextureGroup(dungeon_tex, pyglet.graphics.OrderedGroup(Position.ORDER_FLOOR, self._level_group))
         self._level_vlist = self._batch.add(len(vertices) / 2, pyglet.gl.GL_QUADS, group,
             ('v2i/static', vertices),
             ('t3f/statc', tex_coords),
         )
 
-        group = pyglet.graphics.OrderedGroup(Position.ORDER_PLAYER + 1, self._zoom_group)
-        self._light_overlay = LightOverlay(level.size_x, level.size_y, self._batch, group)
+        group = pyglet.graphics.OrderedGroup(Position.ORDER_PLAYER + 1, self._level_group)
+        self._light_overlay = LightOverlay(self._level.size_x, self._level.size_y, self._batch, group)
 
     def update_light(self, old_lightmap, new_lightmap):
         # for all changed cells
@@ -214,7 +225,7 @@ class RenderSystem(object):
                     # if it's memorable, add its current image to the memory
                     if renderable.memorable:
                         pos = entity.get(Position)
-                        group = pyglet.graphics.OrderedGroup(pos.order, self._zoom_group)
+                        group = pyglet.graphics.OrderedGroup(pos.order, self._level_group)
                         sprite = pyglet.sprite.Sprite(renderable.image, pos.x * 8, pos.y * 8, batch=self._batch, group=group)
                         memory.append(sprite)
 
@@ -225,7 +236,7 @@ class RenderSystem(object):
     def add_entity(self, entity):
         image = entity.get(Renderable).image
         pos = entity.get(Position)
-        group = pyglet.graphics.OrderedGroup(pos.order, self._zoom_group)
+        group = pyglet.graphics.OrderedGroup(pos.order, self._level_group)
         sprite = pyglet.sprite.Sprite(image, pos.x * 8, pos.y * 8, batch=self._batch, group=group)
         self._sprites[entity] = sprite
         entity.listen('image_change', self._on_image_change)
@@ -244,6 +255,7 @@ class RenderSystem(object):
         self._sprites[entity].set_position(new_x * 8, new_y * 8)
 
     def draw(self):
+        self._window.clear()
         pyglet.gl.glEnable(pyglet.gl.GL_BLEND)
         pyglet.gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
         self._batch.draw()
@@ -267,6 +279,7 @@ class RenderSystem(object):
             self._light_overlay = None
 
         self._last_messages_view.delete()
+        self._hud.delete()
 
         for anim in self._animations:
             anim.cancel()
@@ -279,7 +292,7 @@ class RenderSystem(object):
 
         label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
             x=x, y=start_y, anchor_x='center', anchor_y='bottom',
-            batch=self._batch, group=self.camera)
+            batch=self._batch, group=self._digits_group)
 
         anim = Animation(1)
 

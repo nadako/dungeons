@@ -35,7 +35,7 @@ MessageLog.register_event_type('on_messages_update')
 
 class LastMessagesView(object):
 
-    def __init__(self, message_log, width, y, batch=None, group=None):
+    def __init__(self, message_log, width, y, batch, group=None):
         self.message_log = message_log
         self.message_log.set_handler('on_messages_update', self.on_messages_update)
         self.layout = pyglet.text.layout.TextLayout(self.prepare_document(), width=width, multiline=True, batch=batch, group=group)
@@ -52,9 +52,6 @@ class LastMessagesView(object):
             parts.append(text)
             parts.append('{}\n')
         return pyglet.text.decode_attributed(''.join(parts))
-
-    def draw(self):
-        self.layout.draw()
 
     def delete(self):
         self.message_log.remove_handler('on_messages_update', self.on_messages_update)

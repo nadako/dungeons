@@ -39,8 +39,8 @@ class Level(object):
 
         self._generate_level()
 
-        self.render_system.render_level(self)
-        self.render_system.camera.focus = self.player
+        self.render_system.render_level()
+        self.render_system.update_player()
         self.player.get(FOV).update_light()
 
     def _generate_level(self):

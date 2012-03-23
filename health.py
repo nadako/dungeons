@@ -10,6 +10,7 @@ class Health(Component):
 
     def on_take_damage(self, amount, source):
         self.health -= amount
+        self.owner.event('health_update')
         if self.health <= 0:
             self.die(source)
 

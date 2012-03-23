@@ -1,14 +1,7 @@
 import greenlet
 import pyglet
-from pyglet.window import key
-from pyglet import gl
 
 from command import Command
-from description import get_name
-from fight import Fighter
-from health import Health
-from inventory import Inventory
-from item import Item
 from level import Level
 from message import MessageLog
 
@@ -85,9 +78,9 @@ class MainMenuState(GameState):
         self.label.draw()
 
     def on_key_press(self, sym, mod):
-        if sym == key.ESCAPE:
+        if sym == pyglet.window.key.ESCAPE:
             self.game.quit()
-        elif sym == key.ENTER:
+        elif sym == pyglet.window.key.ENTER:
             self.game.change_state(PlayLevelState(self.game))
         return pyglet.event.EVENT_HANDLED
 
@@ -100,15 +93,9 @@ class PlayLevelState(GameState):
     def enter(self):
         self._g_root = greenlet.getcurrent()
         self._g_loop = greenlet.greenlet(self._loop)
-
         self.message_log = MessageLog()
-
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
-
-        self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
-
         self.game.window.push_handlers(self)
-
         self._g_loop.switch()
 
     def exit(self):
@@ -116,6 +103,8 @@ class PlayLevelState(GameState):
         self.level.render_system.dispose()
 
     def on_key_press(self, sym, mod):
+        key = pyglet.window.key
+
         if sym == key.ESCAPE:
             self.game.quit()
             return pyglet.event.EVENT_HANDLED
@@ -149,30 +138,10 @@ class PlayLevelState(GameState):
             self._g_loop.switch(command)
 
     def on_draw(self):
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         self.level.render_system.draw()
-        self._draw_hud()
-
-    def _draw_hud(self):
-        self._player_status.draw()
-
-    def _update_player_status(self):
-        item_names = []
-        for item in self.level.player.get(Inventory).items:
-            name = get_name(item)
-            item_component = item.get(Item)
-            if item_component.quantity > 1:
-                name += ' (%d)' % item_component.quantity
-            item_names.append(name)
-        inventory = ', '.join(item_names) or 'nothing'
-        fighter = self.level.player.get(Fighter)
-        health = self.level.player.get(Health)
-        text = 'HP: %d/%d, ATK: %d, DEF: %d (INV: %s)' % (health.health, health.max_health, fighter.attack, fighter.defense, inventory)
-        self._player_status.text = text
 
     def _loop(self):
         while True:
-            self._update_player_status()
             self.level.tick()
 
     def get_command(self):
