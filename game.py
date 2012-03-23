@@ -11,7 +11,6 @@ from inventory import Inventory
 from item import Item
 from level import Level
 from message import MessageLog, LastMessagesView
-from render import Camera
 
 
 class GameState(object):
@@ -108,7 +107,6 @@ class PlayLevelState(GameState):
         self.level = Level(self, self.DUNGEON_SIZE_X, self.DUNGEON_SIZE_Y)
 
         self._player_status = pyglet.text.Label(font_name='eight2empire', anchor_y='bottom')
-        self._camera = Camera(self.game.window, self.level.render_system.zoom, self.level.player)
 
         self.game.window.push_handlers(self)
 
@@ -154,10 +152,7 @@ class PlayLevelState(GameState):
 
     def on_draw(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-
-        with self._camera:
-            self.level.render_system.draw()
-
+        self.level.render_system.draw()
         self._draw_hud()
 
     def _draw_hud(self):

@@ -30,7 +30,7 @@ class Level(object):
     def __init__(self, game, size_x, size_y):
         self.actor_system = ActorSystem(self)
         self.position_system = PositionSystem()
-        self.render_system = RenderSystem()
+        self.render_system = RenderSystem(game.game.window)
         self.game = game
         self.size_x = size_x
         self.size_y = size_y
@@ -40,6 +40,7 @@ class Level(object):
         self._generate_level()
 
         self.render_system.render_level(self)
+        self.render_system.camera.focus = self.player
         self.player.get(FOV).update_light()
 
     def _generate_level(self):

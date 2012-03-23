@@ -44,6 +44,38 @@ class ZoomGroup(pyglet.graphics.Group):
         return '%s(zoom=%d)' % (self.__class__.__name__, self.zoom)
 
 
+class CameraGroup(pyglet.graphics.Group):
+
+    def __init__(self, window, zoom_factor, focus=None, parent=None):
+        super(CameraGroup, self).__init__(parent)
+        self.window = window
+        self.zoom_factor = zoom_factor
+        self.focus = focus
+
+    def set_state(self):
+        if self.focus is not None:
+            pos = self.focus.get(Position)
+            cam_x = self.window.width / 2 - pos.x * 8 * self.zoom_factor
+            cam_y = self.window.height / 2 - pos.y * 8 * self.zoom_factor
+            pyglet.gl.gl.glPushMatrix()
+            pyglet.gl.gl.glTranslatef(cam_x, cam_y, 0)
+
+    def unset_state(self):
+        if self.focus is not None:
+            pyglet.gl.glPopMatrix()
+
+    def __eq__(self, other):
+        return (
+            self.__class__ is other.__class__ and
+            self.window is other.window and
+            self.zoom_factor == other.zoom_factor and
+            self.parent == other.parent
+            )
+
+    def __hash__(self):
+        return hash((self.window, self.zoom_factor, self.parent))
+
+
 class Animation(object):
 
     def __init__(self, duration):
@@ -87,36 +119,20 @@ class LayoutRenderable(Component):
         self.tile = tile
 
 
-class Camera(object):
-
-    def __init__(self, window, zoom_factor, focus):
-        self.window = window
-        self.zoom_factor = zoom_factor
-        self.focus = focus
-
-    def __enter__(self):
-        pos = self.focus.get(Position)
-        cam_x = self.window.width / 2 - pos.x * 8 * self.zoom_factor
-        cam_y = self.window.height / 2 - pos.y * 8 * self.zoom_factor
-        pyglet.gl.gl.glPushMatrix()
-        pyglet.gl.gl.glTranslatef(cam_x, cam_y, 0)
-
-    def __exit__(self, *exc):
-        pyglet.gl.glPopMatrix()
-
-
 class RenderSystem(object):
 
     zoom = 3
 
-    def __init__(self):
+    def __init__(self, window):
+        self._window = window
         self._batch = pyglet.graphics.Batch()
         self._text_overlay_batch = pyglet.graphics.Batch() # TODO: why doesnt it work in the main batch?
         self._animations = set()
         self._sprites = {}
         self._level_vlist = None
         self._light_overlay = None
-        self._zoom_group = ZoomGroup(self.zoom)
+        self.camera = CameraGroup(self._window, self.zoom)
+        self._zoom_group = ZoomGroup(self.zoom, self.camera)
 
     def render_level(self, level):
         vertices = []
@@ -210,7 +226,7 @@ class RenderSystem(object):
 
         label = pyglet.text.Label('-' + str(dmg), font_name='eight2empire', color=(255, 0, 0, 255),
             x=x, y=start_y, anchor_x='center', anchor_y='bottom',
-            batch=self._text_overlay_batch)
+            batch=self._text_overlay_batch, group=self.camera)
 
         anim = Animation(1)
 
